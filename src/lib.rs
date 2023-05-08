@@ -58,6 +58,8 @@ pub mod systems;
 
 /// Egui render node.
 pub mod egui_node;
+#[cfg(target_arch = "wasm32")]
+mod text_agent;
 
 pub use egui;
 
@@ -555,6 +557,10 @@ impl Plugin for EguiPlugin {
                 .in_set(EguiSet::InitContexts)
                 .in_base_set(CoreSet::PreUpdate),
         );
+
+        #[cfg(target_arch = "wasm32")]
+        app.add_startup_system(text_agent::install);
+
         app.add_system(
             process_input_system
                 .in_set(EguiSet::ProcessInput)

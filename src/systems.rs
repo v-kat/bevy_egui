@@ -1,6 +1,9 @@
+#[cfg(target_arch = "wasm32")]
+use crate::text_agent;
 use crate::{
     EguiContext, EguiContextQuery, EguiInput, EguiMousePosition, EguiSettings, WindowSize,
 };
+
 #[cfg(feature = "open_url")]
 use bevy::log;
 use bevy::{
@@ -228,6 +231,11 @@ pub fn process_input_system(
                     .push(egui::Event::Text(event.char.to_string()));
             }
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        text_agent::update_text_agent(&input_resources, &context_params);
     }
 
     if let Some(mut focused_input) = context_params
