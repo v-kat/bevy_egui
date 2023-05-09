@@ -117,32 +117,45 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         let on_input = Closure::wrap(Box::new(move |_event: web_sys::InputEvent| {
             let text = input_clone.value();
             if !text.is_empty() && !is_composing.get() {
+                bevy::log::info!("Input Event {:?}", text);
                 input_clone.set_value("");
-                let _ = sender_clone.send(egui::Event::Text(text));
+                if text.len() == 1 {
+                    let _ = sender_clone.send(egui::Event::Text(text));
+                }
             }
         }) as Box<dyn FnMut(_)>);
         input.add_event_listener_with_callback("input", on_input.as_ref().unchecked_ref())?;
         on_input.forget();
     }
-    {
+    /* {
         // When IME is on, handle composition event
         let input_clone = input.clone();
         let sender_clone = sender.clone();
         let on_compositionend = Closure::wrap(Box::new(move |event: web_sys::CompositionEvent| {
             // let event_type = event.type_();
+
             match event.type_().as_ref() {
                 "compositionstart" => {
                     is_composing.set(true);
                     input_clone.set_value("");
+                    bevy::log::info!("Composition Start Event");
+                    let _ = sender_clone.send(egui::Event::CompositionStart);
                 }
                 "compositionend" => {
                     is_composing.set(false);
                     input_clone.set_value("");
-                    if let Some(text) = event.data() {
-                        let _ = sender_clone.send(egui::Event::Text(text));
+
+                    if let Some(event) = event.data().map(egui::Event::CompositionEnd) {
+                        bevy::log::info!("Composition End Event {:?}", event);
+                        let _ = sender_clone.send(event);
                     }
                 }
-                "compositionupdate" => {}
+                "compositionupdate" => {
+                    if let Some(event) = event.data().map(egui::Event::CompositionUpdate) {
+                        bevy::log::info!("Composition Update Event {:?}", event);
+                        let _ = sender_clone.send(event);
+                    }
+                }
                 _s => panic!("Unknown type"),
             }
         }) as Box<dyn FnMut(_)>);
@@ -151,7 +164,7 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         input.add_event_listener_with_callback("compositionupdate", f)?;
         input.add_event_listener_with_callback("compositionend", f)?;
         on_compositionend.forget();
-    }
+    } */
     {
         // When input lost focus, focus on it again.
         // It is useful when user click somewhere outside canvas.
@@ -176,8 +189,7 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
 
 pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValue> {
     use wasm_bindgen::JsCast;
-    let window = web_sys::window().unwrap();
-    let document = window.document().unwrap();
+    let document = web_sys::window().unwrap().document().unwrap();
 
     {
         // keydown
@@ -356,18 +368,21 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
     }
     .style();
 
-    let mut focus = false;
+    let mut editing_text = false;
 
-    for contexts in context_params.contexts.iter() {
-        if contexts.egui_input.has_focus {
-            focus = true;
+    for context in context_params.contexts.iter() {
+        move_text_cursor(context.egui_output.platform_output.text_cursor_pos);
+        let platform_output = &context.egui_output.platform_output;
+
+        if platform_output.text_cursor_pos.is_some() || platform_output.mutable_text_under_cursor {
+            editing_text = true;
             break;
         }
     }
 
-    if focus {
-        let is_already_editing = input.hidden();
-        if is_already_editing {
+    if editing_text {
+        let is_not_editing = input.hidden();
+        if is_not_editing {
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -379,29 +394,40 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
 
             // Move up canvas so that text edit is shown at ~30% of screen height.
             // Only on touch screens, when keyboard popups.
-            /* if let Some(latest_touch_pos) = runner.input.latest_touch_pos {
-                let window_height = window.inner_height().ok()?.as_f64()? as f32;
-                let current_rel = latest_touch_pos.y / window_height;
+            let latest_touch_pos = context_params.last_touch.pos;
+            let window_height = window.inner_height().unwrap().as_f64().unwrap() as f32;
+            let current_rel = latest_touch_pos.y / window_height;
 
-                // estimated amount of screen covered by keyboard
-                let keyboard_fraction = 0.5;
+            // estimated amount of screen covered by keyboard
+            let keyboard_fraction = 0.5;
 
-                if current_rel > keyboard_fraction {
-                    // below the keyboard
+            if current_rel > keyboard_fraction {
+                // below the keyboard
 
-                    let target_rel = 0.3;
+                let target_rel = 0.3;
 
-                    // Note: `delta` is negative, since we are moving the canvas UP
-                    let delta = target_rel - current_rel;
+                // Note: `delta` is negative, since we are moving the canvas UP
+                let delta = target_rel - current_rel;
 
-                    let delta = delta.max(-keyboard_fraction); // Don't move it crazy much
+                let delta = delta.max(-keyboard_fraction); // Don't move it crazy much
 
-                    let new_pos_percent = format!("{}%", (delta * 100.0).round());
+                let new_pos_percent = format!("{}%", (delta * 100.0).round());
 
-                    canvas_style.set_property("position", "absolute").ok()?;
-                    canvas_style.set_property("top", &new_pos_percent).ok()?;
+                match canvas_style.set_property("position", "absolute").ok() {
+                    Some(_) => {}
+                    None => {
+                        bevy::log::error!("Unable to set canvas position");
+                        return;
+                    }
                 }
-            } */
+                match canvas_style.set_property("top", &new_pos_percent).ok() {
+                    Some(_) => {}
+                    None => {
+                        bevy::log::error!("Unable to set canvas position");
+                        return;
+                    }
+                }
+            }
         }
     } else {
         // Holding the runner lock while calling input.blur() causes a panic.
@@ -419,8 +445,20 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         }
 
         input.set_hidden(true);
-        /* canvas_style.set_property("position", "absolute").ok()?;
-        canvas_style.set_property("top", "0%").ok()?; // move back to normal position */
+        match canvas_style.set_property("position", "absolute").ok() {
+            Some(_) => {}
+            None => {
+                bevy::log::error!("Unable to set canvas position");
+                return;
+            }
+        }
+        match canvas_style.set_property("top", "0%").ok() {
+            Some(_) => {}
+            None => {
+                bevy::log::error!("Unable to set canvas position");
+                return;
+            }
+        } // move back to normal position
     }
 }
 

@@ -23,6 +23,7 @@ use bevy::{
         WindowFocused,
     },
 };
+use egui::Pos2;
 use std::marker::PhantomData;
 
 #[allow(missing_docs)]
@@ -58,7 +59,10 @@ impl<'w, 's> InputEvents<'w, 's> {
 
 #[allow(missing_docs)]
 #[derive(Resource, Default)]
-pub struct TouchId(pub Option<u64>);
+pub struct LastTouch {
+    pub id: Option<u64>,
+    pub pos: Pos2,
+}
 
 #[allow(missing_docs)]
 #[derive(SystemParam)]
@@ -74,7 +78,7 @@ pub struct InputResources<'w, 's> {
 #[derive(SystemParam)]
 pub struct ContextSystemParams<'w, 's> {
     pub focused_window: Local<'s, Option<Entity>>,
-    pub pointer_touch_id: Local<'s, TouchId>,
+    pub last_touch: Local<'s, LastTouch>,
     pub contexts: Query<'w, 's, EguiContextQuery>,
     #[system_param(ignore)]
     _marker: PhantomData<&'s ()>,
@@ -313,20 +317,21 @@ pub fn process_input_system(
 
             // If we're not yet tanslating a touch or we're translating this very
             // touch …
-            if context_params.pointer_touch_id.0.is_none()
-                || context_params.pointer_touch_id.0.unwrap() == touch.id
+            if context_params.last_touch.id.is_none()
+                || context_params.last_touch.id.unwrap() == touch.id
             {
                 // … emit PointerButton resp. PointerMoved events to emulate mouse
                 match touch.phase {
                     bevy::input::touch::TouchPhase::Started => {
-                        context_params.pointer_touch_id.0 = Some(touch.id);
+                        let egui_pos = egui::pos2(touch_position.0, touch_position.1);
+
+                        context_params.last_touch.id = Some(touch.id);
+                        context_params.last_touch.pos = egui_pos;
+
                         // First move the pointer to the right location
                         focused_input
                             .events
-                            .push(egui::Event::PointerMoved(egui::pos2(
-                                touch_position.0,
-                                touch_position.1,
-                            )));
+                            .push(egui::Event::PointerMoved(egui_pos));
                         // Then do mouse button input
                         focused_input.events.push(egui::Event::PointerButton {
                             pos: egui::pos2(touch_position.0, touch_position.1),
@@ -336,17 +341,22 @@ pub fn process_input_system(
                         });
                     }
                     bevy::input::touch::TouchPhase::Moved => {
+                        let egui_pos = egui::pos2(touch_position.0, touch_position.1);
+
+                        context_params.last_touch.pos = egui_pos;
+
                         focused_input
                             .events
-                            .push(egui::Event::PointerMoved(egui::pos2(
-                                touch_position.0,
-                                touch_position.1,
-                            )));
+                            .push(egui::Event::PointerMoved(egui_pos));
                     }
                     bevy::input::touch::TouchPhase::Ended => {
-                        context_params.pointer_touch_id.0 = None;
+                        let egui_pos = egui::pos2(touch_position.0, touch_position.1);
+
+                        context_params.last_touch.id = None;
+                        context_params.last_touch.pos = egui_pos;
+
                         focused_input.events.push(egui::Event::PointerButton {
-                            pos: egui::pos2(touch_position.0, touch_position.1),
+                            pos: egui_pos,
                             button: egui::PointerButton::Primary,
                             pressed: false,
                             modifiers,
@@ -354,7 +364,7 @@ pub fn process_input_system(
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                     bevy::input::touch::TouchPhase::Cancelled => {
-                        context_params.pointer_touch_id.0 = None;
+                        context_params.last_touch.id = None;
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                 }
@@ -433,9 +443,6 @@ pub fn process_output_system(
             textures_delta,
             repaint_after,
         } = full_output;
-
-        #[cfg(target_arch = "wasm32")]
-        text_agent::move_text_cursor(platform_output.text_cursor_pos);
 
         let paint_jobs = ctx.tessellate(shapes);
 
