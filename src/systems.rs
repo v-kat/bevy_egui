@@ -235,7 +235,7 @@ pub fn process_input_system(
 
     #[cfg(target_arch = "wasm32")]
     {
-        text_agent::update_text_agent(&input_resources, &context_params);
+        text_agent::update_text_agent(&context_params);
     }
 
     if let Some(mut focused_input) = context_params
@@ -433,6 +433,10 @@ pub fn process_output_system(
             textures_delta,
             repaint_after,
         } = full_output;
+
+        #[cfg(target_arch = "wasm32")]
+        text_agent::move_text_cursor(platform_output.text_cursor_pos);
+
         let paint_jobs = ctx.tessellate(shapes);
 
         context.render_output.paint_jobs = paint_jobs;

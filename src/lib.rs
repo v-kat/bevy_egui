@@ -559,7 +559,24 @@ impl Plugin for EguiPlugin {
         );
 
         #[cfg(target_arch = "wasm32")]
-        app.add_startup_system(text_agent::install);
+        {
+            use bevy::prelude::Res;
+            app.init_resource::<text_agent::TextAgentChannel>();
+
+            app.add_startup_system(|channel: Res<text_agent::TextAgentChannel>| {
+                text_agent::install_text_agent(channel.sender.clone()).unwrap();
+                text_agent::install_document_events(channel.sender.clone()).unwrap()
+            });
+
+            app.add_system(
+                text_agent::propagate_text
+                    .in_set(EguiSet::ProcessInput)
+                    .before(process_input_system)
+                    .after(InputSystem)
+                    .after(EguiSet::InitContexts)
+                    .in_base_set(CoreSet::PreUpdate),
+            );
+        }
 
         app.add_system(
             process_input_system

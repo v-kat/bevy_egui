@@ -78,6 +78,7 @@ web-sys = { version = "0.3.58", features = [
   "WheelEvent",
   "Window",
 ] }
+crossbeam-channel = "0.5"
 
 [dev-dependencies]
 once_cell = "1.16.0"
