@@ -115,7 +115,6 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         let on_input = Closure::wrap(Box::new(move |_event: web_sys::InputEvent| {
             let text = input_clone.value();
             if !text.is_empty() && !is_composing.get() {
-                bevy::log::info!("Input Event {:?}", text);
                 input_clone.set_value("");
                 if text.len() == 1 {
                     let _ = sender_clone.send(egui::Event::Text(text));
