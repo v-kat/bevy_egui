@@ -48,7 +48,6 @@ pub fn propagate_text(
 }
 
 fn text_agent() -> web_sys::HtmlInputElement {
-    use wasm_bindgen::JsCast;
     web_sys::window()
         .unwrap()
         .document()
@@ -81,7 +80,6 @@ fn modifiers_from_event(event: &web_sys::KeyboardEvent) -> egui::Modifiers {
 
 /// Text event handler,
 pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
-    use wasm_bindgen::JsCast;
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let body = document.body().expect("document should have a body");
@@ -127,44 +125,6 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         input.add_event_listener_with_callback("input", on_input.as_ref().unchecked_ref())?;
         on_input.forget();
     }
-    /* {
-        // When IME is on, handle composition event
-        let input_clone = input.clone();
-        let sender_clone = sender.clone();
-        let on_compositionend = Closure::wrap(Box::new(move |event: web_sys::CompositionEvent| {
-            // let event_type = event.type_();
-
-            match event.type_().as_ref() {
-                "compositionstart" => {
-                    is_composing.set(true);
-                    input_clone.set_value("");
-                    bevy::log::info!("Composition Start Event");
-                    let _ = sender_clone.send(egui::Event::CompositionStart);
-                }
-                "compositionend" => {
-                    is_composing.set(false);
-                    input_clone.set_value("");
-
-                    if let Some(event) = event.data().map(egui::Event::CompositionEnd) {
-                        bevy::log::info!("Composition End Event {:?}", event);
-                        let _ = sender_clone.send(event);
-                    }
-                }
-                "compositionupdate" => {
-                    if let Some(event) = event.data().map(egui::Event::CompositionUpdate) {
-                        bevy::log::info!("Composition Update Event {:?}", event);
-                        let _ = sender_clone.send(event);
-                    }
-                }
-                _s => panic!("Unknown type"),
-            }
-        }) as Box<dyn FnMut(_)>);
-        let f = on_compositionend.as_ref().unchecked_ref();
-        input.add_event_listener_with_callback("compositionstart", f)?;
-        input.add_event_listener_with_callback("compositionupdate", f)?;
-        input.add_event_listener_with_callback("compositionend", f)?;
-        on_compositionend.forget();
-    } */
     {
         // When input lost focus, focus on it again.
         // It is useful when user click somewhere outside canvas.
@@ -188,7 +148,6 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
 }
 
 pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValue> {
-    use wasm_bindgen::JsCast;
     let document = web_sys::window().unwrap().document().unwrap();
 
     {
@@ -326,7 +285,6 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
 
 /// Focus or blur text agent to toggle mobile keyboard.
 pub fn update_text_agent(context_params: &ContextSystemParams) {
-    use wasm_bindgen::JsCast;
     use web_sys::HtmlInputElement;
 
     let window = match web_sys::window() {
@@ -430,16 +388,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             }
         }
     } else {
-        // Holding the runner lock while calling input.blur() causes a panic.
-        // This is most probably caused by the browser running the event handler
-        // for the triggered blur event synchronously, meaning that the mutex
-        // lock does not get dropped by the time another event handler is called.
-        //
-        // Why this didn't exist before #1290 is a mystery to me, but it exists now
-        // and this apparently is the fix for it
-        //
-        // ¯\_(ツ)_/¯ - @DusterTheFirst
-        if let Err(e) = input.blur() {
+        if let Err(_) = input.blur() {
             bevy::log::error!("Agent element not found");
             return;
         }
