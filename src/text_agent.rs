@@ -359,7 +359,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.5;
 
-            if current_rel > keyboard_fraction {
+            if current_rel > keyboard_fraction && is_mobile() == Some(true) {
                 // below the keyboard
 
                 let target_rel = 0.3;
