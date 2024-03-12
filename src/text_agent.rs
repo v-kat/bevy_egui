@@ -80,6 +80,7 @@ fn modifiers_from_event(event: &web_sys::KeyboardEvent) -> egui::Modifiers {
 
 /// Text event handler,
 pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
+    log::info!("initing the text_agent");
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let body = document.body().expect("document should have a body");
