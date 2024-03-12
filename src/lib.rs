@@ -59,6 +59,8 @@ pub mod systems;
 /// Egui render node.
 #[cfg(feature = "render")]
 pub mod egui_node;
+#[cfg(target_arch = "wasm32")]
+mod text_agent;
 
 pub use egui;
 
@@ -91,10 +93,9 @@ use bevy::{
     utils::HashMap,
 };
 use bevy::{
-    app::{App, Plugin, PostUpdate, PreStartup, PreUpdate},
+    app::{App, Plugin, PostUpdate, PreUpdate},
     ecs::{
         query::{QueryData, QueryEntityError},
-        schedule::apply_deferred,
         system::SystemParam,
     },
     input::InputSystem,
@@ -597,26 +598,27 @@ impl Plugin for EguiPlugin {
         #[cfg(feature = "render")]
         app.add_plugins(ExtractComponentPlugin::<EguiRenderOutput>::default());
 
-        app.add_systems(
-            PreStartup,
-            (
-                setup_new_windows_system,
-                apply_deferred,
-                update_window_contexts_system,
-            )
-                .chain()
-                .in_set(EguiStartupSet::InitContexts),
-        );
-        app.add_systems(
-            PreUpdate,
-            (
-                setup_new_windows_system,
-                apply_deferred,
-                update_window_contexts_system,
-            )
-                .chain()
-                .in_set(EguiSet::InitContexts),
-        );
+        #[cfg(target_arch = "wasm32")]
+        {
+            use bevy::prelude::Res;
+            app.init_resource::<text_agent::TextAgentChannel>();
+
+            app.add_system(app::PreStartup, |channel: Res<text_agent::TextAgentChannel>| {
+                text_agent::install_text_agent(channel.sender.clone()).unwrap();
+                text_agent::install_document_events(channel.sender.clone()).unwrap()
+            });
+
+            app.add_system(
+                PreUpdate,
+                text_agent::propagate_text
+                    .in_set(EguiSet::ProcessInput)
+                    .before(process_input_system)
+                    .after(InputSystem)
+                    .after(EguiSet::InitContexts)
+                    .in_base_set(CoreSet::PreUpdate),
+            );
+        }
+
         app.add_systems(
             PreUpdate,
             process_input_system

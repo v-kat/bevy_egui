@@ -1,6 +1,9 @@
+#[cfg(target_arch = "wasm32")]
+use crate::text_agent;
 use crate::{
     EguiContext, EguiContextQuery, EguiInput, EguiMousePosition, EguiSettings, WindowSize,
 };
+
 #[cfg(feature = "open_url")]
 use bevy::log;
 use bevy::{
@@ -52,6 +55,16 @@ impl<'w, 's> InputEvents<'w, 's> {
         self.ev_window_focused.read().last();
         self.ev_window_created.read().last();
         self.ev_touch.read().last();
+        // self.ev_touch.iter().last();
+        // self.ev_cursor_entered.iter().last();
+        // self.ev_cursor_left.iter().last();
+        // self.ev_cursor.iter().last();
+        // self.ev_mouse_button_input.iter().last();
+        // self.ev_mouse_wheel.iter().last();
+        // self.ev_received_character.iter().last();
+        // self.ev_keyboard_input.iter().last();
+        // self.ev_window_focused.iter().last();
+        // self.ev_window_created.iter().last();
     }
 }
 
@@ -276,6 +289,11 @@ pub fn process_input_system(
                     .push(egui::Event::Text(event.char.to_string()));
             }
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        text_agent::update_text_agent(&context_params);
     }
 
     if let Some(mut focused_input) = context_params
