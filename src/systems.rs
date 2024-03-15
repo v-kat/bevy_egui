@@ -24,6 +24,7 @@ use bevy::{
         WindowFocused,
     },
 };
+use egui::Pos2;
 use std::marker::PhantomData;
 
 #[allow(missing_docs)]
@@ -97,6 +98,7 @@ pub struct InputResources<'w, 's> {
 pub struct ContextSystemParams<'w, 's> {
     pub focused_window: Local<'s, Option<Entity>>,
     pub pointer_touch_id: Local<'s, TouchId>,
+    pub pointer_touch_pos: Local<'s, Pos2>,
     pub contexts: Query<'w, 's, EguiContextQuery>,
     pub is_macos: Local<'s, bool>,
     #[system_param(ignore)]
@@ -377,7 +379,10 @@ pub fn process_input_system(
                 // … emit PointerButton resp. PointerMoved events to emulate mouse
                 match touch.phase {
                     bevy::input::touch::TouchPhase::Started => {
-                        context_params.pointer_touch_id.0 = Some(touch.id);
+                        let egui_pos = egui::pos2(touch_position.0, touch_position.1);
+
+                        context_params.pointer_touch_id.0 = None;
+                        *context_params.pointer_touch_pos = egui_pos;
                         // First move the pointer to the right location
                         focused_input
                             .events
@@ -394,6 +399,9 @@ pub fn process_input_system(
                         });
                     }
                     bevy::input::touch::TouchPhase::Moved => {
+                        let egui_pos = egui::pos2(touch_position.0, touch_position.1);
+
+                        *context_params.pointer_touch_pos = egui_pos;
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui::pos2(
@@ -402,7 +410,10 @@ pub fn process_input_system(
                             )));
                     }
                     bevy::input::touch::TouchPhase::Ended => {
+                        let egui_pos = egui::pos2(touch_position.0, touch_position.1);
+
                         context_params.pointer_touch_id.0 = None;
+                        *context_params.pointer_touch_pos = egui_pos;
                         focused_input.events.push(egui::Event::PointerButton {
                             pos: egui::pos2(touch_position.0, touch_position.1),
                             button: egui::PointerButton::Primary,

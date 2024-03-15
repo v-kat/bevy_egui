@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    window::PrimaryWindow,
-};
+use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_egui::{EguiContexts, EguiPlugin, EguiSettings};
 
 struct Images {

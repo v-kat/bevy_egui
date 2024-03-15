@@ -3,6 +3,8 @@
 
 use std::{cell::Cell, rc::Rc};
 
+#[allow(unused_imports)]
+use bevy::log;
 use bevy::{
     prelude::{EventWriter, Res, Resource},
     window::RequestRedraw,
@@ -33,7 +35,7 @@ pub fn propagate_text(
     mut redraw_event: EventWriter<RequestRedraw>,
 ) {
     for mut contexts in context_params.contexts.iter_mut() {
-        if contexts.egui_input.has_focus {
+        if contexts.egui_input.focused {
             let mut redraw = false;
             while let Ok(r) = channel.receiver.try_recv() {
                 redraw = true;
@@ -167,6 +169,7 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
             if let Some(key) = translate_key(&key) {
                 let _ = sender_clone.send(egui::Event::Key {
                     key,
+                    physical_key: Some(key),
                     pressed: true,
                     modifiers,
                     repeat: false,
@@ -224,6 +227,7 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
             if let Some(key) = translate_key(&event.key()) {
                 let _ = sender_clone.send(egui::Event::Key {
                     key,
+                    physical_key: Some(key),
                     pressed: false,
                     modifiers,
                     repeat: false,
@@ -329,10 +333,10 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
     let mut editing_text = false;
 
     for context in context_params.contexts.iter() {
-        move_text_cursor(context.egui_output.platform_output.text_cursor_pos);
+        move_text_cursor(context.egui_output.platform_output.ime);
         let platform_output = &context.egui_output.platform_output;
 
-        if platform_output.text_cursor_pos.is_some() || platform_output.mutable_text_under_cursor {
+        if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
             editing_text = true;
             break;
         }
@@ -352,7 +356,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
 
             // Move up canvas so that text edit is shown at ~30% of screen height.
             // Only on touch screens, when keyboard popups.
-            let latest_touch_pos = context_params.last_touch.pos;
+            let latest_touch_pos = &context_params.pointer_touch_pos;
             let window_height = window.inner_height().unwrap().as_f64().unwrap() as f32;
             let current_rel = latest_touch_pos.y / window_height;
 
@@ -365,7 +369,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
                 let target_rel = 0.3;
 
                 // Note: `delta` is negative, since we are moving the canvas UP
-                let delta = target_rel - current_rel;
+                let delta: f32 = target_rel - current_rel;
 
                 let delta = delta.max(-keyboard_fraction); // Don't move it crazy much
 
@@ -382,13 +386,12 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
                     Some(_) => {}
                     None => {
                         bevy::log::error!("Unable to set canvas position");
-                        return;
                     }
                 }
             }
         }
     } else {
-        if let Err(_) = input.blur() {
+        if input.blur().is_err() {
             bevy::log::error!("Agent element not found");
             return;
         }
@@ -405,7 +408,6 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             Some(_) => {}
             None => {
                 bevy::log::error!("Unable to set canvas position");
-                return;
             }
         } // move back to normal position
     }
@@ -424,11 +426,12 @@ fn is_mobile() -> Option<bool> {
 // candidate window moves following text element (agent),
 // so it appears that the IME candidate window moves with text cursor.
 // On mobile devices, there is no need to do that.
-pub fn move_text_cursor(cursor: Option<egui::Pos2>) -> Option<()> {
+pub fn move_text_cursor(ime: Option<egui::output::IMEOutput>) -> Option<()> {
     let style = text_agent().style();
     // Note: movint agent on mobile devices will lead to unpredictable scroll.
     if is_mobile() == Some(false) {
-        cursor.as_ref().and_then(|&egui::Pos2 { x, y }| {
+        ime.as_ref().and_then(|ime| {
+            let egui::Pos2 { x, y } = ime.cursor_rect.left_top();
             let document = web_sys::window()?.document()?;
             let canvas = match document.query_selector("canvas") {
                 Ok(Some(canvas)) => canvas,
