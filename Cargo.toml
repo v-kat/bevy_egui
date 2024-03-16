@@ -75,7 +75,7 @@ bevy = { version = "0.13", default-features = false, features = [
     "png",
     "bevy_pbr",
     "bevy_core_pipeline",
-    # "tonemapping_luts",
+    "tonemapping_luts",
 ] }
 
 [workspace]

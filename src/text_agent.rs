@@ -82,7 +82,6 @@ fn modifiers_from_event(event: &web_sys::KeyboardEvent) -> egui::Modifiers {
 
 /// Text event handler,
 pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
-    log::info!("initing the text_agent");
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let body = document.body().expect("document should have a body");
@@ -107,8 +106,6 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
     input.set_size(1);
     input.set_autofocus(true);
     input.set_hidden(true);
-
-    bevy::log::info!("Text Agent Installed");
 
     {
         // When IME is off
@@ -162,8 +159,6 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
             }
 
             let modifiers = modifiers_from_event(&event);
-            //runner_lock.input.raw.modifiers = modifiers;
-
             let key = event.key();
 
             if let Some(key) = translate_key(&key) {
@@ -184,36 +179,6 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
                 let _ = sender_clone.send(egui::Event::Text(key));
             }
 
-            /* let egui_wants_keyboard = runner_lock.egui_ctx().wants_keyboard_input();
-
-            let prevent_default = if matches!(event.key().as_str(), "Tab") {
-                // Always prevent moving cursor to url bar.
-                // egui wants to use tab to move to the next text field.
-                true
-            } else if egui_wants_keyboard {
-                matches!(
-                    event.key().as_str(),
-                    "Backspace" // so we don't go back to previous page when deleting text
-                | "ArrowDown" | "ArrowLeft" | "ArrowRight" | "ArrowUp" // cmd-left is "back" on Mac (https://github.com/emilk/egui/issues/58)
-                )
-            } else {
-                // We never want to prevent:
-                // * F5 / cmd-R (refresh)
-                // * cmd-shift-C (debug tools)
-                // * cmd/ctrl-c/v/x (or we stop copy/past/cut events)
-                false
-            };
-
-            // console_log(format!(
-            //     "On key-down {:?}, egui_wants_keyboard: {}, prevent_default: {}",
-            //     event.key().as_str(),
-            //     egui_wants_keyboard,
-            //     prevent_default
-            // ));
-
-            if prevent_default {
-                event.prevent_default();
-            } */
         }) as Box<dyn FnMut(_)>);
         document.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())?;
         closure.forget();
@@ -274,15 +239,6 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
         document.add_event_listener_with_callback("copy", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
-
-    /* for event_name in &["load", "pagehide", "pageshow", "resize"] {
-        let runner_ref = runner_ref.clone();
-        let closure = Closure::wrap(Box::new(move || {
-            runner_ref.0.lock().needs_repaint.set_true();
-        }) as Box<dyn FnMut()>);
-        window.add_event_listener_with_callback(event_name, closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    } */
 
     Ok(())
 }
