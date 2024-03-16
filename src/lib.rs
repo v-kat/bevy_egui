@@ -96,6 +96,7 @@ use bevy::{
     app::{App, Plugin, PostUpdate, PreUpdate, PreStartup},
     ecs::{
         query::{QueryData, QueryEntityError},
+        schedule::apply_deferred,
         system::SystemParam,
     },
     input::InputSystem,
@@ -597,6 +598,27 @@ impl Plugin for EguiPlugin {
         app.add_plugins(ExtractComponentPlugin::<WindowSize>::default());
         #[cfg(feature = "render")]
         app.add_plugins(ExtractComponentPlugin::<EguiRenderOutput>::default());
+
+        app.add_systems(
+            PreStartup,
+            (
+                setup_new_windows_system,
+                apply_deferred,
+                update_window_contexts_system,
+            )
+                .chain()
+                .in_set(EguiStartupSet::InitContexts),
+        );
+        app.add_systems(
+            PreUpdate,
+            (
+                setup_new_windows_system,
+                apply_deferred,
+                update_window_contexts_system,
+            )
+                .chain()
+                .in_set(EguiSet::InitContexts),
+        );
 
         #[cfg(target_arch = "wasm32")]
         {
