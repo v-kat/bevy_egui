@@ -296,8 +296,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         move_text_cursor(context.egui_output.platform_output.ime);
         let platform_output = &context.egui_output.platform_output;
 
-        // if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
-        if platform_output.mutable_text_under_cursor {
+        if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
             editing_text = true;
             break;
         }
