@@ -376,10 +376,7 @@ pub fn process_input_system(
                         // First move the pointer to the right location
                         focused_input
                             .events
-                            .push(egui::Event::PointerMoved(egui::pos2(
-                                touch_position.0,
-                                touch_position.1,
-                            )));
+                            .push(egui::Event::PointerMoved(egui_pos));
                         // Then do mouse button input
                         focused_input.events.push(egui::Event::PointerButton {
                             pos: egui::pos2(touch_position.0, touch_position.1),
@@ -394,10 +391,7 @@ pub fn process_input_system(
                         *context_params.pointer_touch_pos = egui_pos;
                         focused_input
                             .events
-                            .push(egui::Event::PointerMoved(egui::pos2(
-                                touch_position.0,
-                                touch_position.1,
-                            )));
+                            .push(egui::Event::PointerMoved(egui_pos));
                     }
                     bevy::input::touch::TouchPhase::Ended => {
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
@@ -405,7 +399,7 @@ pub fn process_input_system(
                         context_params.pointer_touch_id.0 = None;
                         *context_params.pointer_touch_pos = egui_pos;
                         focused_input.events.push(egui::Event::PointerButton {
-                            pos: egui::pos2(touch_position.0, touch_position.1),
+                            pos: egui_pos,
                             button: egui::PointerButton::Primary,
                             pressed: false,
                             modifiers,

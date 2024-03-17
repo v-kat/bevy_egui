@@ -302,7 +302,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         }
     }
 
-    if editing_text {
+    if editing_text && context_params.pointer_touch_id.0.is_some() {
         let is_not_editing = input.hidden();
         if is_not_editing {
             input.set_hidden(false);
