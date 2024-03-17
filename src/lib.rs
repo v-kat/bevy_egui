@@ -625,8 +625,6 @@ impl Plugin for EguiPlugin {
             use bevy::prelude::Res;
             app.init_resource::<text_agent::TextAgentChannel>();
 
-            log::error!("inited resource");
-
             app.add_systems(
                 PreStartup,
                 |channel: Res<text_agent::TextAgentChannel>| {
@@ -634,7 +632,6 @@ impl Plugin for EguiPlugin {
                     text_agent::install_document_events(channel.sender.clone()).unwrap()
                 },
             );
-            log::error!("prestartup system");
 
             app.add_systems(
                 PreUpdate,
@@ -644,7 +641,6 @@ impl Plugin for EguiPlugin {
                     .after(InputSystem)
                     .after(EguiSet::InitContexts),
             );
-            log::error!("preupdate system");
         }
 
         app.add_systems(
