@@ -371,7 +371,7 @@ pub fn process_input_system(
                     bevy::input::touch::TouchPhase::Started => {
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
-                        context_params.pointer_touch_id.0 = None;
+                        context_params.pointer_touch_id.0 = Some(touch.id);
                         *context_params.pointer_touch_pos = egui_pos;
                         // First move the pointer to the right location
                         focused_input
