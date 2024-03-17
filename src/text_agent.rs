@@ -296,15 +296,16 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         move_text_cursor(context.egui_output.platform_output.ime);
         let platform_output = &context.egui_output.platform_output;
 
-        if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
+        // if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
+        if platform_output.mutable_text_under_cursor {
             editing_text = true;
             break;
         }
     }
 
-    if editing_text && context_params.pointer_touch_id.0.is_some() {
-        let is_not_editing = input.hidden();
-        if is_not_editing {
+    if editing_text {
+        let is_already_editing = input.hidden();
+        if is_already_editing {
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -323,7 +324,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.5;
 
-            if current_rel > keyboard_fraction && is_mobile() == Some(true) {
+            if context_params.pointer_touch_id.0.is_some() && current_rel > keyboard_fraction && is_mobile() == Some(true) {
                 // below the keyboard
 
                 let target_rel = 0.3;
