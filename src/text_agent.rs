@@ -129,13 +129,14 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         // It is useful when user click somewhere outside canvas.
         let on_focusout = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
             // Delay 10 ms, and focus again.
-            let func = js_sys::Function::new_no_args(&format!(
-                "document.getElementById('{}').focus()",
-                AGENT_ID
-            ));
-            window
-                .set_timeout_with_callback_and_timeout_and_arguments_0(&func, 10)
-                .unwrap();
+            bevy::log::error!("setting focus with callback");
+            // let func = js_sys::Function::new_no_args(&format!(
+            //     "document.getElementById('{}').focus()",
+            //     AGENT_ID
+            // ));
+            // window
+            //     .set_timeout_with_callback_and_timeout_and_arguments_0(&func, 10)
+            //     .unwrap();
         }) as Box<dyn FnMut(_)>);
         input.add_event_listener_with_callback("focusout", on_focusout.as_ref().unchecked_ref())?;
         on_focusout.forget();
@@ -299,8 +300,10 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
     }
 
     if editing_text {
-        bevy::log::error!("editting text");
+        // bevy::log::error!("editting text");
         let is_already_editing = input.hidden();
+
+        // seems to stay in an always editting text mode and never does the focus thing
         if is_already_editing {
             bevy::log::error!("unhidding input and focus");
             input.set_hidden(false);
