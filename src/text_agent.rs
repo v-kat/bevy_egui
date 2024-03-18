@@ -303,8 +303,10 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
     }
 
     if editing_text {
+        bevy::log::error!("editting text");
         let is_already_editing = input.hidden();
         if is_already_editing {
+            bevy::log::error!("unhidding input and focus");
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -388,7 +390,7 @@ fn is_mobile() -> Option<bool> {
 // On mobile devices, there is no need to do that.
 pub fn move_text_cursor(ime: Option<egui::output::IMEOutput>) -> Option<()> {
     let style = text_agent().style();
-    // Note: movint agent on mobile devices will lead to unpredictable scroll.
+    // Note: moving agent on mobile devices will lead to unpredictable scroll.
     if is_mobile() == Some(false) {
         ime.as_ref().and_then(|ime| {
             let egui::Pos2 { x, y } = ime.cursor_rect.left_top();

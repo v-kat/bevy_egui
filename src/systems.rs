@@ -364,7 +364,7 @@ pub fn process_input_system(
             // If we're not yet tanslating a touch or we're translating this very
             // touch …
             if context_params.pointer_touch_id.0.is_none()
-                || context_params.pointer_touch_id.0.unwrap() == touch.id
+                || context_params.pointer_touch_id.0.unwrap() != touch.id
             {
                 // … emit PointerButton resp. PointerMoved events to emulate mouse
                 match touch.phase {
@@ -379,7 +379,7 @@ pub fn process_input_system(
                             .push(egui::Event::PointerMoved(egui_pos));
                         // Then do mouse button input
                         focused_input.events.push(egui::Event::PointerButton {
-                            pos: egui::pos2(touch_position.0, touch_position.1),
+                            pos: egui_pos,
                             button: egui::PointerButton::Primary,
                             pressed: true,
                             modifiers,
