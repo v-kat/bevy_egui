@@ -364,7 +364,7 @@ pub fn process_input_system(
             // If we're not yet tanslating a touch or we're translating this very
             // touch …
             if context_params.pointer_touch_id.0.is_none()
-                || context_params.pointer_touch_id.0.unwrap() != touch.id
+                || context_params.pointer_touch_id.0.unwrap() == touch.id
             {
                 // … emit PointerButton resp. PointerMoved events to emulate mouse
                 match touch.phase {

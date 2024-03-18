@@ -143,8 +143,6 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
 
     body.append_child(&input)?;
 
-    bevy::log::error!("installed agent");
-
     Ok(())
 }
 
@@ -241,8 +239,6 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
         document.add_event_listener_with_callback("copy", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
-
-    bevy::log::error!("installed document events");
 
     Ok(())
 }
