@@ -124,23 +124,7 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         input.add_event_listener_with_callback("input", on_input.as_ref().unchecked_ref())?;
         on_input.forget();
     }
-    {
-        // When input lost focus, focus on it again.
-        // It is useful when user click somewhere outside canvas.
-        let on_focusout = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-            // Delay 10 ms, and focus again.
-            bevy::log::error!("setting focus with callback");
-            // let func = js_sys::Function::new_no_args(&format!(
-            //     "document.getElementById('{}').focus()",
-            //     AGENT_ID
-            // ));
-            // window
-            //     .set_timeout_with_callback_and_timeout_and_arguments_0(&func, 10)
-            //     .unwrap();
-        }) as Box<dyn FnMut(_)>);
-        input.add_event_listener_with_callback("focusout", on_focusout.as_ref().unchecked_ref())?;
-        on_focusout.forget();
-    }
+ 
 
     body.append_child(&input)?;
 
@@ -304,7 +288,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         let is_already_editing = input.hidden();
 
         // seems to stay in an always editting text mode and never does the focus thing
-        if is_already_editing {
+        if is_already_editing && context_params.pointer_touch_id.0.is_some() {
             bevy::log::error!("unhidding input and focus");
             input.set_hidden(false);
             match input.focus().ok() {
@@ -324,7 +308,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.5;
 
-            if context_params.pointer_touch_id.0.is_some() && current_rel > keyboard_fraction && is_mobile() == Some(true) {
+            if current_rel > keyboard_fraction && is_mobile() == Some(true) {
                 // below the keyboard
 
                 let target_rel = 0.3;
