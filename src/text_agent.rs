@@ -273,13 +273,14 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         let platform_output = &context.egui_output.platform_output;
 
         if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
+            bevy::log::error!("editting text ime: {} and mutable text {}", platform_output.ime.is_some(), platform_output.mutable_text_under_cursor);
             editing_text = true;
             break;
         }
     }
 
     if editing_text {
-        bevy::log::error!("editting text");
+        bevy::log::error!("editting text and touch_id {:?}", context_params.pointer_touch_id.0);
         let is_already_editing = input.hidden();
 
         // seems to stay in an always editting text mode and never does the focus thing
@@ -334,27 +335,26 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         bevy::log::error!("delay on hiding");
         // https://github.com/emilk/egui/blob/master/crates/eframe/src/web/text_agent.rs#L159
         // maybe same issue with locking
-        call_after_delay(std::time::Duration::from_millis(0), move || {
-            input.blur().ok();
-            input.set_hidden(true);
-            canvas_style.set_property("position", "absolute").ok();
-            canvas_style.set_property("top", "0%").ok(); // move back to normal position
-        });
-    }
-}
+        if input.blur().is_err() {
+            bevy::log::error!("Agent element not found");
+            return;
+        }
 
-fn call_after_delay(delay: std::time::Duration, f: impl FnOnce() + 'static) {
-    use wasm_bindgen::prelude::*;
-    let window = web_sys::window().unwrap();
-    let closure = Closure::once(f);
-    let delay_ms = delay.as_millis() as _;
-    window
-        .set_timeout_with_callback_and_timeout_and_arguments_0(
-            closure.as_ref().unchecked_ref(),
-            delay_ms,
-        )
-        .unwrap();
-    closure.forget(); // We must forget it, or else the callback is canceled on drop
+        input.set_hidden(true);
+        match canvas_style.set_property("position", "absolute").ok() {
+            Some(_) => {}
+            None => {
+                bevy::log::error!("Unable to set canvas position");
+                return;
+            }
+        }
+        match canvas_style.set_property("top", "0%").ok() {
+            Some(_) => {}
+            None => {
+                bevy::log::error!("Unable to set canvas position");
+            }
+        } // move back to normal position
+    }
 }
 
 /// If context is running under mobile device?
