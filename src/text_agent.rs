@@ -94,13 +94,9 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
     {
         let style = input.style();
         // Transparent
-        style.set_property("opacity", "0")?;
+        style.set_property("opacity", "0").unwrap();
         // Hide under canvas
-        style.set_property("z-index", "-1")?;
-
-        style.set_property("position", "absolute")?;
-        style.set_property("top", "0px")?;
-        style.set_property("left", "0px")?;
+        style.set_property("z-index", "-1").unwrap();
     }
     // Set size as small as possible, in case user may click on it.
     input.set_size(1);
@@ -124,6 +120,17 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         input.add_event_listener_with_callback("input", on_input.as_ref().unchecked_ref())?;
         on_input.forget();
     }
+
+     // When input lost focus, focus on it again.
+    // It is useful when user click somewhere outside canvas.
+    let input_refocus = input.clone();
+    input.add_event_listener("focusout", move |_event: web_sys::MouseEvent, _| {
+        // Delay 10 ms, and focus again.
+        let input_refocus = input_refocus.clone();
+        call_after_delay(std::time::Duration::from_millis(10), move || {
+            input_refocus.focus().ok();
+        });
+    })?;
 
     body.append_child(&input)?;
 
@@ -283,12 +290,12 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
     }
 
     if editing_text {
-        // bevy::log::error!("editting text");
+        bevy::log::error!("editting text");
         let is_already_editing = input.hidden();
 
         // seems to stay in an always editting text mode and never does the focus thing
-        if is_already_editing {
-            // bevy::log::error!("unhidding input and focus");
+        if context_params.pointer_touch_id.0.is_none() && is_already_editing {
+            bevy::log::error!("unhidding input and focus");
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -307,7 +314,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.5;
 
-            if context_params.pointer_touch_id.0.is_some() && current_rel > keyboard_fraction && is_mobile() == Some(true) {
+            if current_rel > keyboard_fraction && is_mobile() == Some(true) {
                 // below the keyboard
 
                 let target_rel = 0.3;
@@ -335,6 +342,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             }
         }
     } else {
+        bevy::log::error!("delay on hiding");
         // https://github.com/emilk/egui/blob/master/crates/eframe/src/web/text_agent.rs#L159
         // maybe same issue with locking
         call_after_delay(std::time::Duration::from_millis(0), move || {
