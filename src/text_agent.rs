@@ -121,18 +121,6 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         on_input.forget();
     }
 
-     // When input lost focus, focus on it again.
-    // It is useful when user click somewhere outside canvas.
-    let input_refocus = input.clone();
-    let on_focusout = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        // Delay 10 ms, and focus again.
-        let input_refocus = input_refocus.clone();
-        call_after_delay(std::time::Duration::from_millis(10), move || {
-            input_refocus.focus().ok();
-        });
-        }) as Box<dyn FnMut(_)>);
-    input.add_event_listener_with_callback("focusout", on_focusout.as_ref().unchecked_ref())?;
-
     body.append_child(&input)?;
 
     Ok(())
