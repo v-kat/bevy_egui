@@ -273,19 +273,16 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         let platform_output = &context.egui_output.platform_output;
 
         if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
-            bevy::log::error!("editting text ime: {} and mutable text {}", platform_output.ime.is_some(), platform_output.mutable_text_under_cursor);
             editing_text = true;
             break;
         }
     }
 
     if editing_text {
-        bevy::log::error!("editting text and touch_id {:?}", context_params.pointer_touch_id.0);
         let is_already_editing = input.hidden();
 
         // seems to stay in an always editting text mode and never does the focus thing
         if context_params.pointer_touch_id.0.is_none() && is_already_editing {
-            bevy::log::error!("unhidding input and focus");
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -332,7 +329,6 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             }
         }
     } else {
-        bevy::log::error!("delay on hiding");
         // https://github.com/emilk/egui/blob/master/crates/eframe/src/web/text_agent.rs#L159
         // maybe same issue with locking
         if input.blur().is_err() {
