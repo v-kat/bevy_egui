@@ -452,7 +452,8 @@ pub(crate) fn color_image_as_bevy_image(
             TextureDimension::D2,
             pixels,
             TextureFormat::Rgba8UnormSrgb,
-            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+            RenderAssetUsages::MAIN_WORLD, // trying RenderAssetPersistencePolicy::Unload equivalent
+            // RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
         )
     }
 }
