@@ -301,13 +301,11 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             let current_rel = latest_touch_pos.y / window_height;
 
             // estimated amount of screen covered by keyboard
-            let keyboard_fraction = 0.5;
+            let keyboard_fraction = 0.4;
 
             bevy::log::error!("failing with keyboard rel {:?} and fraction {:?} and rel {:?}", is_mobile(), keyboard_fraction, current_rel);
-            // if current_rel > keyboard_fraction && is_mobile() == Some(true) {
-            if current_rel > keyboard_fraction {
+            if current_rel > keyboard_fraction && is_mobile() == Some(true) {
                 // below the keyboard
-
                 let target_rel = 0.3;
 
                 // Note: `delta` is negative, since we are moving the canvas UP
