@@ -209,7 +209,7 @@ impl EguiClipboard {
 
     #[cfg(target_arch = "wasm32")]
     fn set_contents_impl(&mut self, contents: &str) {
-        self.clipboard = contents.to_owned();
+        contents.clone_into(&mut self.clipboard);
     }
 
     #[cfg(not(target_arch = "wasm32"))]

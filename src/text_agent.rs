@@ -97,6 +97,10 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         style.set_property("opacity", "0").unwrap();
         // Hide under canvas
         style.set_property("z-index", "-1").unwrap();
+
+        style.set_property("position", "absolute")?;
+        style.set_property("top", "0px")?;
+        style.set_property("left", "0px")?;
     }
     // Set size as small as possible, in case user may click on it.
     input.set_size(1);
@@ -109,6 +113,7 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
         let sender_clone = sender.clone();
         let is_composing = is_composing.clone();
         let on_input = Closure::wrap(Box::new(move |_event: web_sys::InputEvent| {
+            bevy::log::error!("on input happening. Idk");
             let text = input_clone.value();
             if !text.is_empty() && !is_composing.get() {
                 input_clone.set_value("");
@@ -133,6 +138,7 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
         // keydown
         let sender_clone = sender.clone();
         let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            bevy::log::error!("keyboard event keydown {:?}", event);
             if event.is_composing() || event.key_code() == 229 {
                 // https://www.fxsitecompat.dev/en-CA/docs/2018/keydown-and-keyup-events-are-now-fired-during-ime-composition/
                 return;
@@ -168,6 +174,7 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
         // keyup
         let sender_clone = sender.clone();
         let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            bevy::log::error!("keyboard event keyup {:?}", event);
             let modifiers = modifiers_from_event(&event);
             if let Some(key) = translate_key(&event.key()) {
                 let _ = sender_clone.send(egui::Event::Key {
@@ -294,8 +301,6 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             }
         }
     } else {
-        // https://github.com/emilk/egui/blob/master/crates/eframe/src/web/text_agent.rs#L159
-        // maybe same issue with locking
         if input.blur().is_err() {
             bevy::log::error!("Agent element not found");
             return;
