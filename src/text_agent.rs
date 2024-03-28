@@ -183,43 +183,6 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
         closure.forget();
     }
 
-    #[cfg(web_sys_unstable_apis)]
-    {
-        // paste
-        let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |event: web_sys::ClipboardEvent| {
-            if let Some(data) = event.clipboard_data() {
-                if let Ok(text) = data.get_data("text") {
-                    let _ = sender_clone.send(egui::Event::Text(text));
-                }
-            }
-        }) as Box<dyn FnMut(_)>);
-        document.add_event_listener_with_callback("paste", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-
-    #[cfg(web_sys_unstable_apis)]
-    {
-        // cut
-        let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |_: web_sys::ClipboardEvent| {
-            let _ = sender_clone.send(egui::Event::Cut);
-        }) as Box<dyn FnMut(_)>);
-        document.add_event_listener_with_callback("cut", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-
-    #[cfg(web_sys_unstable_apis)]
-    {
-        // copy
-        let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |_: web_sys::ClipboardEvent| {
-            let _ = sender_clone.send(egui::Event::Copy);
-        }) as Box<dyn FnMut(_)>);
-        document.add_event_listener_with_callback("copy", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-
     Ok(())
 }
 
@@ -284,7 +247,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
 
         // seems to stay in an always editting text mode and never does the focus thing
         bevy::log::error!("pointer_touch_id {:?} and is_already_editing {:?}", context_params.pointer_touch_id.0, is_already_editing);
-        if context_params.pointer_touch_id.0.is_none() && is_already_editing {
+        if context_params.pointer_touch_id.0.is_none() && is_already_editing && context_params.pointer_touch_pos.is_some() {
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -296,7 +259,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
 
             // Move up canvas so that text edit is shown at ~30% of screen height.
             // Only on touch screens, when keyboard popups.
-            let latest_touch_pos = &context_params.pointer_touch_pos;
+            let latest_touch_pos = &context_params.pointer_touch_pos.unwrap();
             let window_height = window.inner_height().unwrap().as_f64().unwrap() as f32;
             let current_rel = latest_touch_pos.y / window_height;
 
