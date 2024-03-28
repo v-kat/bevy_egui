@@ -272,6 +272,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         move_text_cursor(context.egui_output.platform_output.ime);
         let platform_output = &context.egui_output.platform_output;
 
+        bevy::log::error!("platformOutput ime {:?} and text {:?}", platform_output.mutable_text_under_cursor, platform_output.ime);
         if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
             editing_text = true;
             break;
@@ -282,6 +283,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         let is_already_editing = input.hidden();
 
         // seems to stay in an always editting text mode and never does the focus thing
+        bevy::log::error!("pointer_touch_id {:?} and is_already_editing {:?}", context_params.pointer_touch_id.0, is_already_editing);
         if context_params.pointer_touch_id.0.is_none() && is_already_editing {
             input.set_hidden(false);
             match input.focus().ok() {
