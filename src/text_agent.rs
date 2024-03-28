@@ -272,7 +272,7 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
         move_text_cursor(context.egui_output.platform_output.ime);
         let platform_output = &context.egui_output.platform_output;
 
-        bevy::log::error!("platformOutput ime {:?} and text {:?}", platform_output.mutable_text_under_cursor, platform_output.ime);
+        // bevy::log::error!("platformOutput ime {:?} and text {:?}", platform_output.mutable_text_under_cursor, platform_output.ime);
         if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
             editing_text = true;
             break;
@@ -303,7 +303,9 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.5;
 
-            if current_rel > keyboard_fraction && is_mobile() == Some(true) {
+            bevy::log::error!("failing with keyboard rel {:?} and fraction {:?} and rel {:?}", is_mobile(), keyboard_fraction, current_rel);
+            // if current_rel > keyboard_fraction && is_mobile() == Some(true) {
+            if current_rel > keyboard_fraction {
                 // below the keyboard
 
                 let target_rel = 0.3;
