@@ -16,6 +16,7 @@ use crate::systems::ContextSystemParams;
 
 static AGENT_ID: &str = "egui_text_agent";
 
+#[derive(Debug)]
 pub enum TouchWebEvent {
     Fired,
 }
@@ -43,6 +44,8 @@ pub fn propagate_text(
             let mut redraw = false;
             while let Ok(r) = channel.receiver.try_recv() {
                 redraw = true;
+
+                bevy::log::error!("in context handler {:?}", r);
                 if let Some(TouchWebEvent::Fired) = r.1 {
                     move_text_cursor(contexts.egui_output.platform_output.ime);
                     let mut editing_text = false;
@@ -133,7 +136,6 @@ pub fn install_text_agent(
         let sender_clone = sender.clone();
         let is_composing = is_composing.clone();
         let on_input = Closure::wrap(Box::new(move |_event: web_sys::InputEvent| {
-            bevy::log::error!("on input happening. Idk");
             let text = input_clone.value();
             if !text.is_empty() && !is_composing.get() {
                 input_clone.set_value("");
@@ -160,7 +162,6 @@ pub fn install_document_events(
         // keydown
         let sender_clone = sender.clone();
         let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-            bevy::log::error!("keyboard event keydown {:?}", event);
             if event.is_composing() || event.key_code() == 229 {
                 // https://www.fxsitecompat.dev/en-CA/docs/2018/keydown-and-keyup-events-are-now-fired-during-ime-composition/
                 return;
@@ -198,7 +199,6 @@ pub fn install_document_events(
         // keyup
         let sender_clone = sender.clone();
         let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-            bevy::log::error!("keyboard event keyup {:?}", event);
             let modifiers = modifiers_from_event(&event);
             if let Some(key) = translate_key(&event.key()) {
                 let _ = sender_clone.send((
@@ -218,10 +218,9 @@ pub fn install_document_events(
     }
 
     {
-        // touch experiment
+        // touch
         let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |event: web_sys::TouchEvent| {
-            bevy::log::error!("touch event touchstart {:?}", event);
+        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
             let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
         }) as Box<dyn FnMut(_)>);
         document
@@ -279,6 +278,7 @@ pub fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>
         let is_already_editing = input.hidden();
 
         if is_already_editing && maybe_touch_pos.is_some() {
+            bevy::log::error!("probably failing to set the touch handler things");
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
