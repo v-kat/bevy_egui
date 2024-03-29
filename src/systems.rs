@@ -283,11 +283,6 @@ pub fn process_input_system(
         }
     }
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        text_agent::update_text_agent(&context_params);
-    }
-
     if let Some(mut focused_input) = context_params
         .focused_window
         .as_ref()
@@ -416,6 +411,12 @@ pub fn process_input_system(
         }
 
         focused_input.modifiers = modifiers;
+
+        // think this is as good as having it installed in an "on_touch event but might move"
+        #[cfg(target_arch = "wasm32")]
+        {
+            text_agent::update_text_agent(&context_params);
+        }
     }
 
     for mut context in context_params.contexts.iter_mut() {
