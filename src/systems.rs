@@ -1,5 +1,3 @@
-#[cfg(target_arch = "wasm32")]
-use crate::text_agent;
 use crate::{
     EguiContext, EguiContextQuery, EguiInput, EguiMousePosition, EguiSettings, WindowSize,
 };
@@ -411,12 +409,6 @@ pub fn process_input_system(
         }
 
         focused_input.modifiers = modifiers;
-
-        // think this is as good as having it installed in an "on_touch event but might move"
-        #[cfg(target_arch = "wasm32")]
-        {
-            text_agent::update_text_agent(&context_params);
-        }
     }
 
     for mut context in context_params.contexts.iter_mut() {

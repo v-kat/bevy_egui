@@ -16,10 +16,14 @@ use crate::systems::ContextSystemParams;
 
 static AGENT_ID: &str = "egui_text_agent";
 
+pub enum TouchWebEvent {
+    Fired,
+}
+
 #[derive(Resource)]
 pub struct TextAgentChannel {
-    pub sender: crossbeam_channel::Sender<egui::Event>,
-    pub receiver: crossbeam_channel::Receiver<egui::Event>,
+    pub sender: crossbeam_channel::Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
+    pub receiver: crossbeam_channel::Receiver<(Option<egui::Event>, Option<TouchWebEvent>)>,
 }
 
 impl Default for TextAgentChannel {
@@ -39,7 +43,21 @@ pub fn propagate_text(
             let mut redraw = false;
             while let Ok(r) = channel.receiver.try_recv() {
                 redraw = true;
-                contexts.egui_input.events.push(r)
+                if let Some(TouchWebEvent::Fired) = r.1 {
+                    move_text_cursor(contexts.egui_output.platform_output.ime);
+                    let mut editing_text = false;
+                    let platform_output = &contexts.egui_output.platform_output;
+
+                    if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
+                        editing_text = true;
+                    }
+                    let maybe_touch_pos = &context_params.pointer_touch_pos;
+                    update_text_agent(editing_text, **maybe_touch_pos);
+                }
+
+                if let Some(e) = r.0 {
+                    contexts.egui_input.events.push(e);
+                }
             }
             if redraw {
                 redraw_event.send(RequestRedraw);
@@ -81,7 +99,9 @@ fn modifiers_from_event(event: &web_sys::KeyboardEvent) -> egui::Modifiers {
 }
 
 /// Text event handler,
-pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
+pub fn install_text_agent(
+    sender: Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
+) -> Result<(), JsValue> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let body = document.body().expect("document should have a body");
@@ -118,7 +138,7 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
             if !text.is_empty() && !is_composing.get() {
                 input_clone.set_value("");
                 if text.len() == 1 {
-                    let _ = sender_clone.send(egui::Event::Text(text));
+                    let _ = sender_clone.send((Some(egui::Event::Text(text)), None));
                 }
             }
         }) as Box<dyn FnMut(_)>);
@@ -131,7 +151,9 @@ pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
     Ok(())
 }
 
-pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValue> {
+pub fn install_document_events(
+    sender: Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
+) -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
 
     {
@@ -148,13 +170,16 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
             let key = event.key();
 
             if let Some(key) = translate_key(&key) {
-                let _ = sender_clone.send(egui::Event::Key {
-                    key,
-                    physical_key: Some(key),
-                    pressed: true,
-                    modifiers,
-                    repeat: false,
-                });
+                let _ = sender_clone.send((
+                    Some(egui::Event::Key {
+                        key,
+                        physical_key: Some(key),
+                        pressed: true,
+                        modifiers,
+                        repeat: false,
+                    }),
+                    None,
+                ));
             }
             if !modifiers.ctrl
                 && !modifiers.command
@@ -162,9 +187,8 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
                 // When text agent is shown, it sends text event instead.
                 && text_agent_hidden()
             {
-                let _ = sender_clone.send(egui::Event::Text(key));
+                let _ = sender_clone.send((Some(egui::Event::Text(key)), None));
             }
-
         }) as Box<dyn FnMut(_)>);
         document.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())?;
         closure.forget();
@@ -177,13 +201,16 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
             bevy::log::error!("keyboard event keyup {:?}", event);
             let modifiers = modifiers_from_event(&event);
             if let Some(key) = translate_key(&event.key()) {
-                let _ = sender_clone.send(egui::Event::Key {
-                    key,
-                    physical_key: Some(key),
-                    pressed: false,
-                    modifiers,
-                    repeat: false,
-                });
+                let _ = sender_clone.send((
+                    Some(egui::Event::Key {
+                        key,
+                        physical_key: Some(key),
+                        pressed: false,
+                        modifiers,
+                        repeat: false,
+                    }),
+                    None,
+                ));
             }
         }) as Box<dyn FnMut(_)>);
         document.add_event_listener_with_callback("keyup", closure.as_ref().unchecked_ref())?;
@@ -191,44 +218,14 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
     }
 
     {
-        use web_sys::HtmlInputElement;
         // touch experiment
+        let sender_clone = sender.clone();
         let closure = Closure::wrap(Box::new(move |event: web_sys::TouchEvent| {
             bevy::log::error!("touch event touchstart {:?}", event);
-            let window = match web_sys::window() {
-                Some(window) => window,
-                None => {
-                    bevy::log::error!("No window found");
-                    return;
-                }
-            };
-            let document = match window.document() {
-                Some(doc) => doc,
-                None => {
-                    bevy::log::error!("No document found");
-                    return;
-                }
-            };
-            let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-                Some(ele) => ele,
-                None => {
-                    bevy::log::error!("Agent element not found");
-                    return;
-                }
-            }
-            .dyn_into()
-            .unwrap();
-
-            input.set_hidden(false);
-            match input.focus().ok() {
-                Some(_) => {}
-                None => {
-                    bevy::log::error!("Unable to set focus");
-                    // return;
-                }
-            }
+            let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
         }) as Box<dyn FnMut(_)>);
-        document.add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())?;
+        document
+            .add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
@@ -236,7 +233,7 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
-pub fn update_text_agent(context_params: &ContextSystemParams) {
+pub fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
     use web_sys::HtmlInputElement;
 
     let window = match web_sys::window() {
@@ -278,25 +275,10 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
     }
     .style();
 
-    let mut editing_text = false;
-
-    for context in context_params.contexts.iter() {
-        move_text_cursor(context.egui_output.platform_output.ime);
-        let platform_output = &context.egui_output.platform_output;
-
-        // bevy::log::error!("platformOutput ime {:?} and text {:?}", platform_output.mutable_text_under_cursor, platform_output.ime);
-        if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
-            editing_text = true;
-            break;
-        }
-    }
-
     if editing_text {
         let is_already_editing = input.hidden();
 
-        // seems to stay in an always editting text mode and never does the focus thing
-        bevy::log::error!("pointer_touch_id {:?} and is_already_editing {:?}", context_params.pointer_touch_id.0, is_already_editing);
-        if context_params.pointer_touch_id.0.is_none() && is_already_editing && context_params.pointer_touch_pos.is_some() {
+        if is_already_editing && maybe_touch_pos.is_some() {
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -308,14 +290,13 @@ pub fn update_text_agent(context_params: &ContextSystemParams) {
 
             // Move up canvas so that text edit is shown at ~30% of screen height.
             // Only on touch screens, when keyboard popups.
-            let latest_touch_pos = &context_params.pointer_touch_pos.unwrap();
+            let latest_touch_pos = maybe_touch_pos.unwrap();
             let window_height = window.inner_height().unwrap().as_f64().unwrap() as f32;
             let current_rel = latest_touch_pos.y / window_height;
 
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.4;
 
-            bevy::log::error!("failing with keyboard rel {:?} and fraction {:?} and rel {:?}", is_mobile(), keyboard_fraction, current_rel);
             if current_rel > keyboard_fraction && is_mobile() == Some(true) {
                 // below the keyboard
                 let target_rel = 0.3;
