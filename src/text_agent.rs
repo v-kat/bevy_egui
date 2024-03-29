@@ -190,6 +190,48 @@ pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValu
         closure.forget();
     }
 
+    {
+        use web_sys::HtmlInputElement;
+        // touch experiment
+        let closure = Closure::wrap(Box::new(move |event: web_sys::TouchEvent| {
+            bevy::log::error!("touch event touchstart {:?}", event);
+            let window = match web_sys::window() {
+                Some(window) => window,
+                None => {
+                    bevy::log::error!("No window found");
+                    return;
+                }
+            };
+            let document = match window.document() {
+                Some(doc) => doc,
+                None => {
+                    bevy::log::error!("No document found");
+                    return;
+                }
+            };
+            let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
+                Some(ele) => ele,
+                None => {
+                    bevy::log::error!("Agent element not found");
+                    return;
+                }
+            }
+            .dyn_into()
+            .unwrap();
+
+            input.set_hidden(false);
+            match input.focus().ok() {
+                Some(_) => {}
+                None => {
+                    bevy::log::error!("Unable to set focus");
+                    // return;
+                }
+            }
+        }) as Box<dyn FnMut(_)>);
+        document.add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
     Ok(())
 }
 
