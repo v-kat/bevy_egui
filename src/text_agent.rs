@@ -56,6 +56,40 @@ pub fn propagate_text(
                     }
                     let maybe_touch_pos = &context_params.pointer_touch_pos;
                     update_text_agent(editing_text, **maybe_touch_pos);
+
+                    use web_sys::HtmlInputElement;
+                    let window = match web_sys::window() {
+                        Some(window) => window,
+                        None => {
+                            bevy::log::error!("No window found");
+                            return;
+                        }
+                    };
+                    let document = match window.document() {
+                        Some(doc) => doc,
+                        None => {
+                            bevy::log::error!("No document found");
+                            return;
+                        }
+                    };
+                    let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
+                        Some(ele) => ele,
+                        None => {
+                            bevy::log::error!("Agent element not found");
+                            return;
+                        }
+                    }
+                    .dyn_into()
+                    .unwrap();
+
+                    input.set_hidden(false);
+                    match input.focus().ok() {
+                        Some(_) => {}
+                        None => {
+                            bevy::log::error!("Unable to set focus");
+                            // return;
+                        }
+                    }
                 }
 
                 if let Some(e) = r.0 {
