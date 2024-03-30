@@ -55,41 +55,8 @@ pub fn propagate_text(
                         editing_text = true;
                     }
                     let maybe_touch_pos = &context_params.pointer_touch_pos;
+                    bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
                     update_text_agent(editing_text, **maybe_touch_pos);
-
-                    use web_sys::HtmlInputElement;
-                    let window = match web_sys::window() {
-                        Some(window) => window,
-                        None => {
-                            bevy::log::error!("No window found");
-                            return;
-                        }
-                    };
-                    let document = match window.document() {
-                        Some(doc) => doc,
-                        None => {
-                            bevy::log::error!("No document found");
-                            return;
-                        }
-                    };
-                    let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-                        Some(ele) => ele,
-                        None => {
-                            bevy::log::error!("Agent element not found");
-                            return;
-                        }
-                    }
-                    .dyn_into()
-                    .unwrap();
-
-                    input.set_hidden(false);
-                    match input.focus().ok() {
-                        Some(_) => {}
-                        None => {
-                            bevy::log::error!("Unable to set focus");
-                            // return;
-                        }
-                    }
                 }
 
                 if let Some(e) = r.0 {
@@ -254,11 +221,11 @@ pub fn install_document_events(
     {
         // touch
         let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
+        let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
             let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
         }) as Box<dyn FnMut(_)>);
         document
-            .add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())?;
+            .add_event_listener_with_callback("onclick", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
