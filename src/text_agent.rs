@@ -6,13 +6,13 @@ use std::{cell::Cell, rc::Rc};
 #[allow(unused_imports)]
 use bevy::log;
 use bevy::{
-    prelude::{EventWriter, Res, Resource},
+    prelude::{EventWriter, Res, Resource, ResMut},
     window::RequestRedraw,
 };
 use crossbeam_channel::Sender;
 use wasm_bindgen::prelude::*;
 
-use crate::systems::ContextSystemParams;
+use crate::systems::{ContextSystemParams, TouchPos};
 
 static AGENT_ID: &str = "egui_text_agent";
 
@@ -36,6 +36,7 @@ impl Default for TextAgentChannel {
 
 pub fn propagate_text(
     channel: Res<TextAgentChannel>,
+    pointer_touch_pos: ResMut<TouchPos>,
     mut context_params: ContextSystemParams,
     mut redraw_event: EventWriter<RequestRedraw>,
 ) {
@@ -55,8 +56,8 @@ pub fn propagate_text(
                     if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
                         editing_text = true;
                     }
-                    let maybe_touch_pos = *context_params.pointer_touch_pos;
-                    bevy::log::error!("click event, edit text {:?} and pos {:?} and id {:?}", editing_text, maybe_touch_pos, context_params.pointer_touch_id);
+                    let maybe_touch_pos = *pointer_touch_pos;
+                    bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
                     update_text_agent(editing_text, maybe_touch_pos.0);
                 }
 
