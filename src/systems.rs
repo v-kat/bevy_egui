@@ -62,7 +62,7 @@ impl<'w, 's> InputEvents<'w, 's> {
 pub struct TouchId(pub Option<u64>);
 
 #[allow(missing_docs)]
-#[derive(Resource, Debug, Default)]
+#[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct TouchPos(pub Option<Pos2>);
 
 /// Stores "pressed" state of modifier keys.
