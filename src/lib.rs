@@ -93,7 +93,7 @@ use bevy::{
     utils::HashMap,
 };
 use bevy::{
-    app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, PostStartup},
+    app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, Startup},
     ecs::{
         query::{QueryData, QueryEntityError},
         schedule::apply_deferred,
@@ -619,20 +619,13 @@ impl Plugin for EguiPlugin {
                 .chain()
                 .in_set(EguiSet::InitContexts),
         );
-        app.add_systems(
-            PreUpdate,
-            process_input_system
-                .in_set(EguiSet::ProcessInput)
-                .after(InputSystem)
-                .after(EguiSet::InitContexts),
-        );
 
         #[cfg(target_arch = "wasm32")]
         {
             use bevy::prelude::Res;
             app.init_resource::<text_agent::TextAgentChannel>();
 
-            app.add_systems(PostStartup, |channel: Res<text_agent::TextAgentChannel>| {
+            app.add_systems(Startup, |channel: Res<text_agent::TextAgentChannel>| {
                 text_agent::install_text_agent(channel.sender.clone()).unwrap();
                 text_agent::install_document_events(channel.sender.clone()).unwrap()
             });
@@ -641,12 +634,19 @@ impl Plugin for EguiPlugin {
                 PreUpdate,
                 text_agent::propagate_text
                     .in_set(EguiSet::ProcessInput)
-                    .after(process_input_system)
+                    .before(process_input_system)
                     .after(InputSystem)
                     .after(EguiSet::InitContexts),
             );
         }
 
+        app.add_systems(
+            PreUpdate,
+            process_input_system
+                .in_set(EguiSet::ProcessInput)
+                .after(InputSystem)
+                .after(EguiSet::InitContexts),
+        );
         app.add_systems(
             PreUpdate,
             begin_frame_system

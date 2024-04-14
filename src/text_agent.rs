@@ -226,7 +226,7 @@ pub fn install_document_events(
             let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
         }) as Box<dyn FnMut(_)>);
         document
-            .add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())?;
+            .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 

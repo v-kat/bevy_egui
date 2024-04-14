@@ -367,6 +367,8 @@ pub fn process_input_system(
                         context_params.pointer_touch_id.0 = Some(touch.id);
                         *context_params.pointer_touch_pos = Some(egui_pos);
                         // First move the pointer to the right location
+
+                        log::error!("failed with touch phase");
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui_pos));
