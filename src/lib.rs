@@ -93,7 +93,7 @@ use bevy::{
     utils::HashMap,
 };
 use bevy::{
-    app::{App, Plugin, PostUpdate, PreStartup, PreUpdate},
+    app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, PostStartup},
     ecs::{
         query::{QueryData, QueryEntityError},
         schedule::apply_deferred,
@@ -625,7 +625,7 @@ impl Plugin for EguiPlugin {
             use bevy::prelude::Res;
             app.init_resource::<text_agent::TextAgentChannel>();
 
-            app.add_systems(PreStartup, |channel: Res<text_agent::TextAgentChannel>| {
+            app.add_systems(PostStartup, |channel: Res<text_agent::TextAgentChannel>| {
                 text_agent::install_text_agent(channel.sender.clone()).unwrap();
                 text_agent::install_document_events(channel.sender.clone()).unwrap()
             });

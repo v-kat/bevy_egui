@@ -221,11 +221,11 @@ pub fn install_document_events(
     {
         // touch
         let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
             let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
         }) as Box<dyn FnMut(_)>);
         document
-            .add_event_listener_with_callback("onclick", closure.as_ref().unchecked_ref())?;
+            .add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
