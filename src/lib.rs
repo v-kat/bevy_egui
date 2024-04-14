@@ -619,6 +619,13 @@ impl Plugin for EguiPlugin {
                 .chain()
                 .in_set(EguiSet::InitContexts),
         );
+        app.add_systems(
+            PreUpdate,
+            process_input_system
+                .in_set(EguiSet::ProcessInput)
+                .after(InputSystem)
+                .after(EguiSet::InitContexts),
+        );
 
         #[cfg(target_arch = "wasm32")]
         {
@@ -634,19 +641,11 @@ impl Plugin for EguiPlugin {
                 PreUpdate,
                 text_agent::propagate_text
                     .in_set(EguiSet::ProcessInput)
-                    .before(process_input_system)
+                    .after(process_input_system)
                     .after(InputSystem)
                     .after(EguiSet::InitContexts),
             );
         }
-
-        app.add_systems(
-            PreUpdate,
-            process_input_system
-                .in_set(EguiSet::ProcessInput)
-                .after(InputSystem)
-                .after(EguiSet::InitContexts),
-        );
         app.add_systems(
             PreUpdate,
             begin_frame_system

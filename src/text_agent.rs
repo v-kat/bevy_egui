@@ -50,13 +50,13 @@ pub fn propagate_text(
                     move_text_cursor(contexts.egui_output.platform_output.ime);
                     let mut editing_text = false;
                     let platform_output = &contexts.egui_output.platform_output;
-                    bevy::log::error!("platform_output ime {:?} and mutable text {:?} and pointer pos", platform_output.ime, platform_output.mutable_text_under_cursor);
+                    bevy::log::error!("platform_output ime {:?} and mutable text {:?}", platform_output.ime, platform_output.mutable_text_under_cursor);
 
                     if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
                         editing_text = true;
                     }
                     let maybe_touch_pos = *context_params.pointer_touch_pos;
-                    bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
+                    bevy::log::error!("click event, edit text {:?} and pos {:?} and id {:?}", editing_text, maybe_touch_pos, context_params.pointer_touch_id);
                     update_text_agent(editing_text, maybe_touch_pos.0);
                 }
 

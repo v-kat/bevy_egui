@@ -58,7 +58,7 @@ impl<'w, 's> InputEvents<'w, 's> {
 }
 
 #[allow(missing_docs)]
-#[derive(Resource, Default)]
+#[derive(Resource, Debug, Default)]
 pub struct TouchId(pub Option<u64>);
 
 #[allow(missing_docs)]
