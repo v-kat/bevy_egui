@@ -90,7 +90,7 @@ pub struct InputResources<'w, 's> {
 pub struct ContextSystemParams<'w, 's> {
     pub focused_window: Local<'s, Option<Entity>>,
     pub pointer_touch_id: Local<'s, TouchId>,
-    pub pointer_touch_pos: Local<'s, TouchPos>,
+    pub pointer_touch_pos: ResMut<'w, TouchPos>,
     pub contexts: Query<'w, 's, EguiContextQuery>,
     pub is_macos: Local<'s, bool>,
     #[system_param(ignore)]
