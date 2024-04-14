@@ -57,7 +57,7 @@ pub fn propagate_text(
                     }
                     let maybe_touch_pos = &context_params.pointer_touch_pos;
                     bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
-                    update_text_agent(editing_text, **maybe_touch_pos);
+                    update_text_agent(editing_text, maybe_touch_pos.0);
                 }
 
                 if let Some(e) = r.0 {

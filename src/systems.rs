@@ -61,6 +61,10 @@ impl<'w, 's> InputEvents<'w, 's> {
 #[derive(Resource, Default)]
 pub struct TouchId(pub Option<u64>);
 
+#[allow(missing_docs)]
+#[derive(Resource, Debug, Default)]
+pub struct TouchPos(pub Option<Pos2>);
+
 /// Stores "pressed" state of modifier keys.
 /// Will be removed if Bevy adds support for `ButtonInput<Key>` (logical keys).
 #[derive(Resource, Default, Clone, Copy, Debug)]
@@ -86,7 +90,7 @@ pub struct InputResources<'w, 's> {
 pub struct ContextSystemParams<'w, 's> {
     pub focused_window: Local<'s, Option<Entity>>,
     pub pointer_touch_id: Local<'s, TouchId>,
-    pub pointer_touch_pos: Local<'s, Option<Pos2>>,
+    pub pointer_touch_pos: Local<'s, TouchPos>,
     pub contexts: Query<'w, 's, EguiContextQuery>,
     pub is_macos: Local<'s, bool>,
     #[system_param(ignore)]
@@ -365,10 +369,10 @@ pub fn process_input_system(
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
                         context_params.pointer_touch_id.0 = Some(touch.id);
-                        *context_params.pointer_touch_pos = Some(egui_pos);
+                        context_params.pointer_touch_pos.0 = Some(egui_pos);
                         // First move the pointer to the right location
 
-                        log::error!("failed with touch phase");
+                        log::error!("failed with touch phase, {:?}", context_params.pointer_touch_pos);
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui_pos));
@@ -383,7 +387,7 @@ pub fn process_input_system(
                     bevy::input::touch::TouchPhase::Moved => {
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
-                        *context_params.pointer_touch_pos = Some(egui_pos);
+                        context_params.pointer_touch_pos.0 = Some(egui_pos);
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui_pos));
@@ -392,7 +396,7 @@ pub fn process_input_system(
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
                         context_params.pointer_touch_id.0 = None;
-                        *context_params.pointer_touch_pos = Some(egui_pos);
+                        context_params.pointer_touch_pos.0 = Some(egui_pos);
                         focused_input.events.push(egui::Event::PointerButton {
                             pos: egui_pos,
                             button: egui::PointerButton::Primary,
@@ -402,8 +406,9 @@ pub fn process_input_system(
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                     bevy::input::touch::TouchPhase::Canceled => {
+                        log::error!("Touchphase canceled=====================");
                         context_params.pointer_touch_id.0 = None;
-                        *context_params.pointer_touch_pos = None;
+                        context_params.pointer_touch_pos.0 = None;
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                 }
