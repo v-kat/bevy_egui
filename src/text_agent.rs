@@ -311,54 +311,54 @@ use std::cell::RefCell;
 pub fn hacky_touch(
     pointer_touch_pos: Res<TouchPos>,
 ) {
-    let document = web_sys::window().unwrap().document().unwrap();
+    // let document = web_sys::window().unwrap().document().unwrap();
 
-    {
-        let touch_rc = RefCell::new(pointer_touch_pos);
-        let touch_cell = touch_rc.borrow();
-        // touch
-        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
-            use web_sys::HtmlInputElement;
-            // touch experiment
-            let window = match web_sys::window() {
-                Some(window) => window,
-                None => {
-                    bevy::log::error!("No window found");
-                    return;
-                }
-            };
-            let document = match window.document() {
-                Some(doc) => doc,
-                None => {
-                    bevy::log::error!("No document found");
-                    return;
-                }
-            };
-            let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-                Some(ele) => ele,
-                None => {
-                    bevy::log::error!("Agent element not found");
-                    return;
-                }
-            }
-            .dyn_into()
-            .unwrap();
+    // {
+    //     let touch_rc = RefCell::new(pointer_touch_pos);
+    //     let touch_cell = touch_rc.borrow();
+    //     // touch
+    //     let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
+    //         use web_sys::HtmlInputElement;
+    //         // touch experiment
+    //         let window = match web_sys::window() {
+    //             Some(window) => window,
+    //             None => {
+    //                 bevy::log::error!("No window found");
+    //                 return;
+    //             }
+    //         };
+    //         let document = match window.document() {
+    //             Some(doc) => doc,
+    //             None => {
+    //                 bevy::log::error!("No document found");
+    //                 return;
+    //             }
+    //         };
+    //         let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
+    //             Some(ele) => ele,
+    //             None => {
+    //                 bevy::log::error!("Agent element not found");
+    //                 return;
+    //             }
+    //         }
+    //         .dyn_into()
+    //         .unwrap();
 
-            input.set_hidden(false);
-            match input.focus().ok() {
-                Some(_) => {}
-                None => {
-                    bevy::log::error!("Unable to set focus");
-                    // return;
-                }
-            }
+    //         input.set_hidden(false);
+    //         match input.focus().ok() {
+    //             Some(_) => {}
+    //             None => {
+    //                 bevy::log::error!("Unable to set focus");
+    //                 // return;
+    //             }
+    //         }
 
-            // bevy::log::error!("hacky touch thing working {:?}", touch_cell);
-        }) as Box<dyn FnMut(_)>);
-        document
-            .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref()).unwrap();
-        closure.forget();
-    }
+    //         // bevy::log::error!("hacky touch thing working {:?}", touch_cell);
+    //     }) as Box<dyn FnMut(_)>);
+    //     document
+    //         .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref()).unwrap();
+    //     closure.forget();
+    // }
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
