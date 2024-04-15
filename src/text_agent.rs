@@ -46,14 +46,51 @@ pub fn propagate_text(
                 redraw = true;
 
                 bevy::log::error!("in context handler {:?}", r);
+                let document = web_sys::window().unwrap().document().unwrap();
+
+                use web_sys::HtmlInputElement;
+                // touch experiment
+                let window = match web_sys::window() {
+                    Some(window) => window,
+                    None => {
+                        bevy::log::error!("No window found");
+                        return;
+                    }
+                };
+                let document = match window.document() {
+                    Some(doc) => doc,
+                    None => {
+                        bevy::log::error!("No document found");
+                        return;
+                    }
+                };
+                let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
+                    Some(ele) => ele,
+                    None => {
+                        bevy::log::error!("Agent element not found");
+                        return;
+                    }
+                }
+                .dyn_into()
+                .unwrap();
+
+                input.set_hidden(false);
+                match input.focus().ok() {
+                    Some(_) => {}
+                    None => {
+                        bevy::log::error!("Unable to set focus");
+                        // return;
+                    }
+                }
+
                 if let Some(TouchWebEvent::Fired) = r.1 {
                     move_text_cursor(contexts.egui_output.platform_output.ime);
-                    let mut editing_text = false;
+                    // let mut editing_text = false;
                     let platform_output = &contexts.egui_output.platform_output;
                     bevy::log::error!("platform_output ime {:?} and mutable text {:?}", platform_output.ime, platform_output.mutable_text_under_cursor);
 
                     if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
-                        editing_text = true;
+                        // editing_text = true;
                     }
                     // let maybe_touch_pos = *pointer_touch_pos;
                     // bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
@@ -157,7 +194,7 @@ pub fn install_text_agent(
 
 pub fn install_document_events(
     sender: Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
-    pointer_touch_pos: ResMut<TouchPos>,
+    // pointer_touch_pos: ResMut<TouchPos>,
 ) -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
 
@@ -269,14 +306,17 @@ pub fn install_document_events(
     Ok(())
 }
 
+use std::cell::RefCell;
+
 pub fn hacky_touch(
-    pointer_touch_pos: ResMut<TouchPos>,
+    pointer_touch_pos: Res<TouchPos>,
 ) {
     let document = web_sys::window().unwrap().document().unwrap();
 
     {
+        let touch_rc = RefCell::new(pointer_touch_pos);
+        let touch_cell = touch_rc.borrow();
         // touch
-        let pointer_clone = pointer_touch_pos.clone();
         let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
             use web_sys::HtmlInputElement;
             // touch experiment
@@ -313,7 +353,7 @@ pub fn hacky_touch(
                 }
             }
 
-            bevy::log::error!("hacky touch thing working {:?}", pointer_clone);
+            // bevy::log::error!("hacky touch thing working {:?}", touch_cell);
         }) as Box<dyn FnMut(_)>);
         document
             .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref()).unwrap();

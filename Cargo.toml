@@ -56,6 +56,7 @@ web-sys = { version = "0.3", features = [
     "DataTransfer",
     "DomRect",
     "Element",
+    "EventTarget",
     "HtmlInputElement",
     "KeyboardEvent",
     "InputEvent",
