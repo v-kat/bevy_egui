@@ -36,7 +36,6 @@ impl Default for TextAgentChannel {
 
 pub fn propagate_text(
     channel: Res<TextAgentChannel>,
-    // pointer_touch_pos: ResMut<TouchPos>,
     mut context_params: ContextSystemParams,
     mut redraw_event: EventWriter<RequestRedraw>,
 ) {
@@ -158,6 +157,7 @@ pub fn install_text_agent(
 
 pub fn install_document_events(
     sender: Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
+    pointer_touch_pos: ResMut<TouchPos>,
 ) -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
 
@@ -267,6 +267,58 @@ pub fn install_document_events(
     }
 
     Ok(())
+}
+
+pub fn hacky_touch(
+    pointer_touch_pos: ResMut<TouchPos>,
+) {
+    let document = web_sys::window().unwrap().document().unwrap();
+
+    {
+        // touch
+        let pointer_clone = pointer_touch_pos.clone();
+        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
+            use web_sys::HtmlInputElement;
+            // touch experiment
+            let window = match web_sys::window() {
+                Some(window) => window,
+                None => {
+                    bevy::log::error!("No window found");
+                    return;
+                }
+            };
+            let document = match window.document() {
+                Some(doc) => doc,
+                None => {
+                    bevy::log::error!("No document found");
+                    return;
+                }
+            };
+            let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
+                Some(ele) => ele,
+                None => {
+                    bevy::log::error!("Agent element not found");
+                    return;
+                }
+            }
+            .dyn_into()
+            .unwrap();
+
+            input.set_hidden(false);
+            match input.focus().ok() {
+                Some(_) => {}
+                None => {
+                    bevy::log::error!("Unable to set focus");
+                    // return;
+                }
+            }
+
+            bevy::log::error!("hacky touch thing working {:?}", pointer_clone);
+        }) as Box<dyn FnMut(_)>);
+        document
+            .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref()).unwrap();
+        closure.forget();
+    }
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
