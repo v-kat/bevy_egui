@@ -48,42 +48,6 @@ pub fn propagate_text(
 
                 bevy::log::error!("in context handler {:?}", r);
                 if let Some(TouchWebEvent::Fired) = r.1 {
-                    use web_sys::HtmlInputElement;
-                    // touch experiment
-                    let window = match web_sys::window() {
-                        Some(window) => window,
-                        None => {
-                            bevy::log::error!("No window found");
-                            return;
-                        }
-                    };
-                    let document = match window.document() {
-                        Some(doc) => doc,
-                        None => {
-                            bevy::log::error!("No document found");
-                            return;
-                        }
-                    };
-                    let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-                        Some(ele) => ele,
-                        None => {
-                            bevy::log::error!("Agent element not found");
-                            return;
-                        }
-                    }
-                    .dyn_into()
-                    .unwrap();
-
-                    input.set_hidden(false);
-                    match input.focus().ok() {
-                        Some(_) => {}
-                        None => {
-                            bevy::log::error!("Unable to set focus");
-                            // return;
-                        }
-                    }
-
-
                     move_text_cursor(contexts.egui_output.platform_output.ime);
                     let mut editing_text = false;
                     let platform_output = &contexts.egui_output.platform_output;
@@ -260,6 +224,41 @@ pub fn install_document_events(
         // touch
         let sender_clone = sender.clone();
         let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
+            use web_sys::HtmlInputElement;
+            // touch experiment
+            let window = match web_sys::window() {
+                Some(window) => window,
+                None => {
+                    bevy::log::error!("No window found");
+                    return;
+                }
+            };
+            let document = match window.document() {
+                Some(doc) => doc,
+                None => {
+                    bevy::log::error!("No document found");
+                    return;
+                }
+            };
+            let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
+                Some(ele) => ele,
+                None => {
+                    bevy::log::error!("Agent element not found");
+                    return;
+                }
+            }
+            .dyn_into()
+            .unwrap();
+
+            input.set_hidden(false);
+            match input.focus().ok() {
+                Some(_) => {}
+                None => {
+                    bevy::log::error!("Unable to set focus");
+                    // return;
+                }
+            }
+
             let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
         }) as Box<dyn FnMut(_)>);
         document
