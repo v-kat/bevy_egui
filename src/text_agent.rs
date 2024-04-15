@@ -36,7 +36,7 @@ impl Default for TextAgentChannel {
 
 pub fn propagate_text(
     channel: Res<TextAgentChannel>,
-    pointer_touch_pos: ResMut<TouchPos>,
+    // pointer_touch_pos: ResMut<TouchPos>,
     mut context_params: ContextSystemParams,
     mut redraw_event: EventWriter<RequestRedraw>,
 ) {
@@ -92,9 +92,9 @@ pub fn propagate_text(
                     if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
                         editing_text = true;
                     }
-                    let maybe_touch_pos = *pointer_touch_pos;
-                    bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
-                    update_text_agent(editing_text, maybe_touch_pos.0);
+                    // let maybe_touch_pos = *pointer_touch_pos;
+                    // bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
+                    // update_text_agent(editing_text, maybe_touch_pos.0);
                 }
 
                 if let Some(e) = r.0 {
