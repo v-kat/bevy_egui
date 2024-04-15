@@ -585,6 +585,8 @@ impl Plugin for EguiPlugin {
         #[cfg(feature = "render")]
         world.init_resource::<EguiUserTextures>();
         world.init_resource::<EguiMousePosition>();
+        #[cfg(target_arch = "wasm32")]
+        world.init_resource::<TouchPos>();
         world.insert_resource(TouchId::default());
         #[cfg(feature = "render")]
         app.add_plugins(ExtractResourcePlugin::<EguiUserTextures>::default());
