@@ -263,7 +263,6 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
         let is_already_editing = input.hidden();
 
         if is_already_editing && maybe_touch_pos.is_some() {
-            bevy::log::error!("probably failing to set the touch handler things");
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
@@ -278,6 +277,7 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
             let latest_touch_pos = maybe_touch_pos.unwrap();
             let window_height = window.inner_height().unwrap().as_f64().unwrap() as f32;
             let current_rel = latest_touch_pos.y / window_height;
+            bevy::log::error!("probably failing to set the touch handler things with current_rel {:?}", current_rel);
 
             // estimated amount of screen covered by keyboard
             let keyboard_fraction = 0.4;
