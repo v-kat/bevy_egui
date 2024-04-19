@@ -1,30 +1,38 @@
 //! The text agent is an `<input>` element used to trigger
 //! mobile keyboard and IME input.
 
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, rc::Rc, sync::Mutex};
 
 #[allow(unused_imports)]
 use bevy::log;
 use bevy::{
-    prelude::{EventWriter, Res, Resource, ResMut},
+    prelude::{EventWriter, Res, Resource},
     window::RequestRedraw,
 };
 use crossbeam_channel::Sender;
+
+use egui::Pos2;
+use once_cell::sync::Lazy;
 use wasm_bindgen::prelude::*;
 
-use crate::systems::{ContextSystemParams, TouchPos};
+use crate::systems::ContextSystemParams;
 
 static AGENT_ID: &str = "egui_text_agent";
 
-#[derive(Debug)]
-pub enum TouchWebEvent {
-    Fired,
+#[allow(missing_docs)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct VirtualTouchInfo {
+    pub editing_text: bool,
+    pub touch_pos: Option<Pos2>,
 }
+
+pub static VIRTUAL_KEYBOARD_GLOBAL: Lazy<Mutex<VirtualTouchInfo>> =
+    Lazy::new(|| Mutex::new(VirtualTouchInfo::default()));
 
 #[derive(Resource)]
 pub struct TextAgentChannel {
-    pub sender: crossbeam_channel::Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
-    pub receiver: crossbeam_channel::Receiver<(Option<egui::Event>, Option<TouchWebEvent>)>,
+    pub sender: crossbeam_channel::Sender<egui::Event>,
+    pub receiver: crossbeam_channel::Receiver<egui::Event>,
 }
 
 impl Default for TextAgentChannel {
@@ -44,62 +52,7 @@ pub fn propagate_text(
             let mut redraw = false;
             while let Ok(r) = channel.receiver.try_recv() {
                 redraw = true;
-
-                bevy::log::error!("in context handler {:?}", r);
-                let document = web_sys::window().unwrap().document().unwrap();
-
-                use web_sys::HtmlInputElement;
-                // touch experiment
-                let window = match web_sys::window() {
-                    Some(window) => window,
-                    None => {
-                        bevy::log::error!("No window found");
-                        return;
-                    }
-                };
-                let document = match window.document() {
-                    Some(doc) => doc,
-                    None => {
-                        bevy::log::error!("No document found");
-                        return;
-                    }
-                };
-                let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-                    Some(ele) => ele,
-                    None => {
-                        bevy::log::error!("Agent element not found");
-                        return;
-                    }
-                }
-                .dyn_into()
-                .unwrap();
-
-                input.set_hidden(false);
-                match input.focus().ok() {
-                    Some(_) => {}
-                    None => {
-                        bevy::log::error!("Unable to set focus");
-                        // return;
-                    }
-                }
-
-                if let Some(TouchWebEvent::Fired) = r.1 {
-                    move_text_cursor(contexts.egui_output.platform_output.ime);
-                    // let mut editing_text = false;
-                    let platform_output = &contexts.egui_output.platform_output;
-                    bevy::log::error!("platform_output ime {:?} and mutable text {:?}", platform_output.ime, platform_output.mutable_text_under_cursor);
-
-                    if platform_output.ime.is_some() || platform_output.mutable_text_under_cursor {
-                        // editing_text = true;
-                    }
-                    // let maybe_touch_pos = *pointer_touch_pos;
-                    // bevy::log::error!("click event, edit text {:?} and pos {:?}", editing_text, maybe_touch_pos);
-                    // update_text_agent(editing_text, maybe_touch_pos.0);
-                }
-
-                if let Some(e) = r.0 {
-                    contexts.egui_input.events.push(e);
-                }
+                contexts.egui_input.events.push(r);
             }
             if redraw {
                 redraw_event.send(RequestRedraw);
@@ -141,9 +94,7 @@ fn modifiers_from_event(event: &web_sys::KeyboardEvent) -> egui::Modifiers {
 }
 
 /// Text event handler,
-pub fn install_text_agent(
-    sender: Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
-) -> Result<(), JsValue> {
+pub fn install_text_agent(sender: Sender<egui::Event>) -> Result<(), JsValue> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let body = document.body().expect("document should have a body");
@@ -179,7 +130,7 @@ pub fn install_text_agent(
             if !text.is_empty() && !is_composing.get() {
                 input_clone.set_value("");
                 if text.len() == 1 {
-                    let _ = sender_clone.send((Some(egui::Event::Text(text)), None));
+                    let _ = sender_clone.send(egui::Event::Text(text));
                 }
             }
         }) as Box<dyn FnMut(_)>);
@@ -192,10 +143,7 @@ pub fn install_text_agent(
     Ok(())
 }
 
-pub fn install_document_events(
-    sender: Sender<(Option<egui::Event>, Option<TouchWebEvent>)>,
-    // pointer_touch_pos: ResMut<TouchPos>,
-) -> Result<(), JsValue> {
+pub fn install_document_events(sender: Sender<egui::Event>) -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
 
     {
@@ -211,16 +159,13 @@ pub fn install_document_events(
             let key = event.key();
 
             if let Some(key) = translate_key(&key) {
-                let _ = sender_clone.send((
-                    Some(egui::Event::Key {
-                        key,
-                        physical_key: Some(key),
-                        pressed: true,
-                        modifiers,
-                        repeat: false,
-                    }),
-                    None,
-                ));
+                let _ = sender_clone.send(egui::Event::Key {
+                    key,
+                    physical_key: Some(key),
+                    pressed: true,
+                    modifiers,
+                    repeat: false,
+                });
             }
             if !modifiers.ctrl
                 && !modifiers.command
@@ -228,7 +173,7 @@ pub fn install_document_events(
                 // When text agent is shown, it sends text event instead.
                 && text_agent_hidden()
             {
-                let _ = sender_clone.send((Some(egui::Event::Text(key)), None));
+                let _ = sender_clone.send(egui::Event::Text(key));
             }
         }) as Box<dyn FnMut(_)>);
         document.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())?;
@@ -241,128 +186,38 @@ pub fn install_document_events(
         let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             let modifiers = modifiers_from_event(&event);
             if let Some(key) = translate_key(&event.key()) {
-                let _ = sender_clone.send((
-                    Some(egui::Event::Key {
-                        key,
-                        physical_key: Some(key),
-                        pressed: false,
-                        modifiers,
-                        repeat: false,
-                    }),
-                    None,
-                ));
+                let _ = sender_clone.send(egui::Event::Key {
+                    key,
+                    physical_key: Some(key),
+                    pressed: false,
+                    modifiers,
+                    repeat: false,
+                });
             }
         }) as Box<dyn FnMut(_)>);
         document.add_event_listener_with_callback("keyup", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
-    {
-        // touch
-        let sender_clone = sender.clone();
-        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
-            use web_sys::HtmlInputElement;
-            // touch experiment
-            let window = match web_sys::window() {
-                Some(window) => window,
-                None => {
-                    bevy::log::error!("No window found");
-                    return;
-                }
-            };
-            let document = match window.document() {
-                Some(doc) => doc,
-                None => {
-                    bevy::log::error!("No document found");
-                    return;
-                }
-            };
-            let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-                Some(ele) => ele,
-                None => {
-                    bevy::log::error!("Agent element not found");
-                    return;
-                }
-            }
-            .dyn_into()
-            .unwrap();
-
-            input.set_hidden(false);
-            match input.focus().ok() {
-                Some(_) => {}
-                None => {
-                    bevy::log::error!("Unable to set focus");
-                    // return;
-                }
-            }
-
-            let _ = sender_clone.send((None, Some(TouchWebEvent::Fired)));
-        }) as Box<dyn FnMut(_)>);
-        document
-            .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-
     Ok(())
 }
 
-use std::cell::RefCell;
-
-pub fn hacky_touch(
-    pointer_touch_pos: Res<TouchPos>,
-) {
-    // let document = web_sys::window().unwrap().document().unwrap();
-
-    // {
-    //     let touch_rc = RefCell::new(pointer_touch_pos);
-    //     let touch_cell = touch_rc.borrow();
-    //     // touch
-    //     let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
-    //         use web_sys::HtmlInputElement;
-    //         // touch experiment
-    //         let window = match web_sys::window() {
-    //             Some(window) => window,
-    //             None => {
-    //                 bevy::log::error!("No window found");
-    //                 return;
-    //             }
-    //         };
-    //         let document = match window.document() {
-    //             Some(doc) => doc,
-    //             None => {
-    //                 bevy::log::error!("No document found");
-    //                 return;
-    //             }
-    //         };
-    //         let input: HtmlInputElement = match document.get_element_by_id(AGENT_ID) {
-    //             Some(ele) => ele,
-    //             None => {
-    //                 bevy::log::error!("Agent element not found");
-    //                 return;
-    //             }
-    //         }
-    //         .dyn_into()
-    //         .unwrap();
-
-    //         input.set_hidden(false);
-    //         match input.focus().ok() {
-    //             Some(_) => {}
-    //             None => {
-    //                 bevy::log::error!("Unable to set focus");
-    //                 // return;
-    //             }
-    //         }
-
-    //         // bevy::log::error!("hacky touch thing working {:?}", touch_cell);
-    //     }) as Box<dyn FnMut(_)>);
-    //     document
-    //         .add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref()).unwrap();
-    //     closure.forget();
-    // }
+pub fn virtual_keyboard_handler() {
+    let document = web_sys::window().unwrap().document().unwrap();
+    {
+        let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
+            let touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
+            update_text_agent(touch_info.editing_text, touch_info.touch_pos);
+        }) as Box<dyn FnMut(_)>);
+        document
+            .add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
-pub fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
+fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
     use web_sys::HtmlInputElement;
 
     let window = match web_sys::window() {

@@ -22,8 +22,9 @@ use bevy::{
         WindowFocused,
     },
 };
-use egui::Pos2;
 use std::marker::PhantomData;
+
+use crate::text_agent::{move_text_cursor, VIRTUAL_KEYBOARD_GLOBAL};
 
 #[allow(missing_docs)]
 #[derive(SystemParam)]
@@ -60,10 +61,6 @@ impl<'w, 's> InputEvents<'w, 's> {
 #[allow(missing_docs)]
 #[derive(Resource, Debug, Default)]
 pub struct TouchId(pub Option<u64>);
-
-#[allow(missing_docs)]
-#[derive(Resource, Clone, Copy, Debug, Default)]
-pub struct TouchPos(pub Option<Pos2>);
 
 /// Stores "pressed" state of modifier keys.
 /// Will be removed if Bevy adds support for `ButtonInput<Key>` (logical keys).
@@ -103,7 +100,6 @@ pub fn process_input_system(
     mut context_params: ContextSystemParams,
     egui_settings: Res<EguiSettings>,
     mut egui_mouse_position: ResMut<EguiMousePosition>,
-    mut pointer_touch_pos: ResMut<TouchPos>,
     time: Res<Time<Real>>,
 ) {
     // Test whether it's macOS or OS X.
@@ -285,6 +281,16 @@ pub fn process_input_system(
         }
     }
 
+    let mut editing_text = false;
+    for context in context_params.contexts.iter() {
+        let platform_output = &context.egui_output.platform_output;
+        if platform_output.ime.is_some()
+            || platform_output.mutable_text_under_cursor
+        {
+            editing_text = true;
+        }
+    }
+
     if let Some(mut focused_input) = context_params
         .focused_window
         .as_ref()
@@ -369,10 +375,11 @@ pub fn process_input_system(
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
                         context_params.pointer_touch_id.0 = Some(touch.id);
-                        pointer_touch_pos.0 = Some(egui_pos);
-                        // First move the pointer to the right location
 
-                        log::error!("failed with touch phase, {:?}", pointer_touch_pos);
+                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
+                        touch_info.editing_text = editing_text;
+                        touch_info.touch_pos = Some(egui_pos);
+
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui_pos));
@@ -387,7 +394,9 @@ pub fn process_input_system(
                     bevy::input::touch::TouchPhase::Moved => {
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
-                        pointer_touch_pos.0 = Some(egui_pos);
+                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
+                        touch_info.editing_text = editing_text;
+                        touch_info.touch_pos = Some(egui_pos);
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui_pos));
@@ -396,7 +405,9 @@ pub fn process_input_system(
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
                         context_params.pointer_touch_id.0 = None;
-                        pointer_touch_pos.0 = Some(egui_pos);
+                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
+                        touch_info.editing_text = editing_text;
+                        touch_info.touch_pos = Some(egui_pos);
                         focused_input.events.push(egui::Event::PointerButton {
                             pos: egui_pos,
                             button: egui::PointerButton::Primary,
@@ -406,9 +417,10 @@ pub fn process_input_system(
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                     bevy::input::touch::TouchPhase::Canceled => {
-                        log::error!("Touchphase canceled=====================");
                         context_params.pointer_touch_id.0 = None;
-                        pointer_touch_pos.0 = None;
+                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
+                        touch_info.editing_text = editing_text;
+                        touch_info.touch_pos = None;
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                 }
@@ -420,6 +432,7 @@ pub fn process_input_system(
 
     for mut context in context_params.contexts.iter_mut() {
         context.egui_input.time = Some(time.elapsed_seconds_f64());
+        move_text_cursor(context.egui_output.platform_output.ime);
     }
 
     // In some cases, we may skip certain events. For example, we ignore `ReceivedCharacter` events

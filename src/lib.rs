@@ -585,8 +585,6 @@ impl Plugin for EguiPlugin {
         #[cfg(feature = "render")]
         world.init_resource::<EguiUserTextures>();
         world.init_resource::<EguiMousePosition>();
-        #[cfg(target_arch = "wasm32")]
-        world.init_resource::<TouchPos>();
         world.insert_resource(TouchId::default());
         #[cfg(feature = "render")]
         app.add_plugins(ExtractResourcePlugin::<EguiUserTextures>::default());
@@ -636,11 +634,12 @@ impl Plugin for EguiPlugin {
 
             app.add_systems(PreStartup, |channel: Res<text_agent::TextAgentChannel>| {
                 text_agent::install_text_agent(channel.sender.clone()).unwrap();
-                // text_agent::install_document_events(channel.sender.clone()).unwrap()
+                text_agent::install_document_events(channel.sender.clone()).unwrap()
             });
 
-            app.add_systems(PreStartup, 
-                text_agent::hacky_touch
+            app.add_systems(
+                PreStartup,
+                text_agent::virtual_keyboard_handler
                     .in_set(EguiSet::ProcessInput)
                     .after(process_input_system)
                     .after(InputSystem)
