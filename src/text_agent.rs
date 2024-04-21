@@ -246,7 +246,6 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
 
     if editing_text {
         let is_already_editing = input.hidden();
-        bevy::log::error!("editing text is_already_editing: {:?} and touch_pos: {:?}", is_already_editing, maybe_touch_pos);
 
         if is_already_editing && maybe_touch_pos.is_some() {
             input.set_hidden(false);
@@ -265,7 +264,6 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
             input.set_hidden(true);
         }
     } else {
-        bevy::log::error!("hiding keyboard");
         if input.blur().is_err() {
             bevy::log::error!("Agent element not found");
             return;
