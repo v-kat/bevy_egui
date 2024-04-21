@@ -284,8 +284,7 @@ pub fn process_input_system(
     let mut editing_text = false;
     for context in context_params.contexts.iter() {
         let platform_output = &context.egui_output.platform_output;
-        if platform_output.ime.is_some()
-            && platform_output.mutable_text_under_cursor
+        if platform_output.mutable_text_under_cursor || platform_output.ime.is_some()
         {
             editing_text = true;
         }
