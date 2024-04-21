@@ -376,9 +376,15 @@ pub fn process_input_system(
 
                         context_params.pointer_touch_id.0 = Some(touch.id);
 
-                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
-                        touch_info.editing_text = editing_text;
-                        touch_info.touch_pos = Some(egui_pos);
+                        match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                            Ok(mut touch_info) => {
+                                touch_info.editing_text = editing_text;
+                                touch_info.touch_pos = Some(egui_pos);
+                            },
+                            Err(poisoned) => {
+                                let _unused = poisoned.into_inner();
+                            }
+                        };
 
                         focused_input
                             .events
@@ -394,9 +400,16 @@ pub fn process_input_system(
                     bevy::input::touch::TouchPhase::Moved => {
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
-                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
-                        touch_info.editing_text = editing_text;
-                        touch_info.touch_pos = Some(egui_pos);
+                        match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                            Ok(mut touch_info) => {
+                                touch_info.editing_text = editing_text;
+                                touch_info.touch_pos = Some(egui_pos);
+                            },
+                            Err(poisoned) => {
+                                let _unused = poisoned.into_inner();
+                            }
+                        };
+                        
                         focused_input
                             .events
                             .push(egui::Event::PointerMoved(egui_pos));
@@ -405,9 +418,15 @@ pub fn process_input_system(
                         let egui_pos = egui::pos2(touch_position.0, touch_position.1);
 
                         context_params.pointer_touch_id.0 = None;
-                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
-                        touch_info.editing_text = editing_text;
-                        touch_info.touch_pos = Some(egui_pos);
+                        match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                            Ok(mut touch_info) => {
+                                touch_info.editing_text = editing_text;
+                                touch_info.touch_pos = Some(egui_pos);
+                            },
+                            Err(poisoned) => {
+                                let _unused = poisoned.into_inner();
+                            }
+                        };
                         focused_input.events.push(egui::Event::PointerButton {
                             pos: egui_pos,
                             button: egui::PointerButton::Primary,
@@ -418,9 +437,15 @@ pub fn process_input_system(
                     }
                     bevy::input::touch::TouchPhase::Canceled => {
                         context_params.pointer_touch_id.0 = None;
-                        let mut touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
-                        touch_info.editing_text = editing_text;
-                        touch_info.touch_pos = None;
+                        match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                            Ok(mut touch_info) => {
+                                touch_info.editing_text = editing_text;
+                                touch_info.touch_pos = None;
+                            },
+                            Err(poisoned) => {
+                                let _unused = poisoned.into_inner();
+                            }
+                        };
                         focused_input.events.push(egui::Event::PointerGone);
                     }
                 }

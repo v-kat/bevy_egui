@@ -243,24 +243,10 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
     }
     .dyn_into()
     .unwrap();
-    let canvas = match document.query_selector("canvas") {
-        Ok(Some(canvas)) => canvas,
-        _ => {
-            bevy::log::error!("No canvas found");
-            return;
-        }
-    };
-    let canvas_style = match canvas.dyn_into::<web_sys::HtmlCanvasElement>().ok() {
-        Some(c) => c,
-        None => {
-            bevy::log::error!("Unable to make element into canvas");
-            return;
-        }
-    }
-    .style();
 
     if editing_text {
         let is_already_editing = input.hidden();
+        bevy::log::error!("editing text is_already_editing: {:?} and touch_pos: {:?}", is_already_editing, maybe_touch_pos);
 
         if is_already_editing && maybe_touch_pos.is_some() {
             input.set_hidden(false);
@@ -268,66 +254,17 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
                 Some(_) => {}
                 None => {
                     bevy::log::error!("Unable to set focus");
-                    // return;
                 }
             }
-
-            // Move up canvas so that text edit is shown at ~30% of screen height.
-            // Only on touch screens, when keyboard popups.
-            // let latest_touch_pos = maybe_touch_pos.unwrap();
-            // let window_height = window.inner_height().unwrap().as_f64().unwrap() as f32;
-            // let current_rel = latest_touch_pos.y / window_height;
-            // bevy::log::error!("probably failing to set the touch handler things with current_rel {:?}", current_rel);
-
-            // // estimated amount of screen covered by keyboard
-            // let keyboard_fraction = 0.4;
-
-            // if current_rel > keyboard_fraction && is_mobile() == Some(true) {
-            //     // below the keyboard
-            //     let target_rel = 0.3;
-
-            //     // Note: `delta` is negative, since we are moving the canvas UP
-            //     let delta: f32 = target_rel - current_rel;
-
-            //     let delta = delta.max(-keyboard_fraction); // Don't move it crazy much
-
-            //     let new_pos_percent = format!("{}%", (delta * 100.0).round());
-
-            //     match canvas_style.set_property("position", "absolute").ok() {
-            //         Some(_) => {}
-            //         None => {
-            //             bevy::log::error!("Unable to set canvas position");
-            //             return;
-            //         }
-            //     }
-            //     match canvas_style.set_property("top", &new_pos_percent).ok() {
-            //         Some(_) => {}
-            //         None => {
-            //             bevy::log::error!("Unable to set canvas position");
-            //         }
-            //     }
-            // }
         }
     } else {
+        bevy::log::error!("hiding keyboard");
         if input.blur().is_err() {
             bevy::log::error!("Agent element not found");
             return;
         }
 
         input.set_hidden(true);
-        match canvas_style.set_property("position", "absolute").ok() {
-            Some(_) => {}
-            None => {
-                bevy::log::error!("Unable to set canvas position");
-                // return;
-            }
-        }
-        // match canvas_style.set_property("top", "0%").ok() {
-        //     Some(_) => {}
-        //     None => {
-        //         bevy::log::error!("Unable to set canvas position");
-        //     }
-        // } // move back to normal position
     }
 }
 
