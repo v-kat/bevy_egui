@@ -634,7 +634,6 @@ impl Plugin for EguiPlugin {
 
             app.add_systems(PreStartup, |channel: Res<text_agent::TextAgentChannel>| {
                 text_agent::install_text_agent(channel.sender.clone()).unwrap();
-                text_agent::install_document_events(channel.sender.clone()).unwrap()
             });
 
             app.add_systems(
