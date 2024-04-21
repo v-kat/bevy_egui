@@ -256,9 +256,13 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
                     bevy::log::error!("Unable to set focus");
                 }
             }
-        } else if input.blur().is_err() {
-            bevy::log::error!("Agent element not found");
-            return;
+        } else {
+            if input.blur().is_err() {
+                bevy::log::error!("Agent element not found");
+                return;
+            }
+
+            input.set_hidden(true);
         }
     } else {
         bevy::log::error!("hiding keyboard");
