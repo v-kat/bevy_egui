@@ -20,6 +20,9 @@ use bevy::{
 };
 use std::marker::PhantomData;
 
+#[cfg(target_arch = "wasm32")]
+use crate::text_agent::VIRTUAL_KEYBOARD_GLOBAL;
+
 #[allow(missing_docs)]
 #[derive(SystemParam)]
 // IMPORTANT: remember to add the logic to clear event readers to the `clear` method.
@@ -254,6 +257,15 @@ pub fn process_input_system(
         }
     }
 
+    let mut editing_text = false;
+    #[cfg(target_arch = "wasm32")]
+    for context in context_params.contexts.iter() {
+        let platform_output = &context.egui_output.platform_output;
+        if platform_output.mutable_text_under_cursor || platform_output.ime.is_some() {
+            editing_text = true;
+        }
+    }
+
     for event in keyboard_input_events {
         let Some(mut window_context) = context_params.window_context(event.window) else {
             continue;
@@ -371,6 +383,18 @@ pub fn process_input_system(
             match event.phase {
                 bevy::input::touch::TouchPhase::Started => {
                     window_context.ctx.pointer_touch_id = Some(event.id);
+
+                    #[cfg(target_arch = "wasm32")]
+                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                        Ok(mut touch_info) => {
+                            touch_info.editing_text = editing_text;
+                            touch_info.touch_pos =
+                                Some(egui::pos2(touch_position.0, touch_position.1));
+                        }
+                        Err(poisoned) => {
+                            let _unused = poisoned.into_inner();
+                        }
+                    };
                     // First move the pointer to the right location.
                     window_context
                         .egui_input
@@ -391,6 +415,18 @@ pub fn process_input_system(
                         });
                 }
                 bevy::input::touch::TouchPhase::Moved => {
+                    #[cfg(target_arch = "wasm32")]
+                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                        Ok(mut touch_info) => {
+                            touch_info.editing_text = editing_text;
+                            touch_info.touch_pos =
+                                Some(egui::pos2(touch_position.0, touch_position.1));
+                        }
+                        Err(poisoned) => {
+                            let _unused = poisoned.into_inner();
+                        }
+                    };
+
                     window_context
                         .egui_input
                         .events
@@ -400,6 +436,17 @@ pub fn process_input_system(
                         )));
                 }
                 bevy::input::touch::TouchPhase::Ended => {
+                    #[cfg(target_arch = "wasm32")]
+                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                        Ok(mut touch_info) => {
+                            touch_info.editing_text = editing_text;
+                            touch_info.touch_pos =
+                                Some(egui::pos2(touch_position.0, touch_position.1));
+                        }
+                        Err(poisoned) => {
+                            let _unused = poisoned.into_inner();
+                        }
+                    };
                     window_context.ctx.pointer_touch_id = None;
                     window_context
                         .egui_input
@@ -416,6 +463,16 @@ pub fn process_input_system(
                         .push(egui::Event::PointerGone);
                 }
                 bevy::input::touch::TouchPhase::Canceled => {
+                    #[cfg(target_arch = "wasm32")]
+                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                        Ok(mut touch_info) => {
+                            touch_info.editing_text = editing_text;
+                            touch_info.touch_pos = None;
+                        }
+                        Err(poisoned) => {
+                            let _unused = poisoned.into_inner();
+                        }
+                    };
                     window_context.ctx.pointer_touch_id = None;
                     window_context
                         .egui_input
