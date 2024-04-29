@@ -263,6 +263,7 @@ pub fn process_input_system(
         let platform_output = &context.egui_output.platform_output;
         if platform_output.mutable_text_under_cursor || platform_output.ime.is_some() {
             editing_text = true;
+            break;
         }
     }
 
@@ -388,8 +389,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touch_pos =
-                                Some(egui::pos2(touch_position.0, touch_position.1));
+                            touch_info.touching = true;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
@@ -419,8 +419,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touch_pos =
-                                Some(egui::pos2(touch_position.0, touch_position.1));
+                            touch_info.touching = true;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
@@ -440,8 +439,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touch_pos =
-                                Some(egui::pos2(touch_position.0, touch_position.1));
+                            touch_info.touching = true;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
@@ -467,7 +465,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touch_pos = None;
+                            touch_info.touching = false;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();

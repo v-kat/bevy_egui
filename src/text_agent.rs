@@ -3,15 +3,12 @@
 
 use std::{cell::Cell, rc::Rc, sync::Mutex};
 
-#[allow(unused_imports)]
-use bevy::log;
 use bevy::{
     prelude::{EventWriter, Res, Resource},
     window::RequestRedraw,
 };
 use crossbeam_channel::Sender;
 
-use egui::Pos2;
 use once_cell::sync::Lazy;
 use wasm_bindgen::prelude::*;
 
@@ -23,7 +20,7 @@ static AGENT_ID: &str = "egui_text_agent";
 #[derive(Clone, Copy, Debug, Default)]
 pub struct VirtualTouchInfo {
     pub editing_text: bool,
-    pub touch_pos: Option<Pos2>,
+    pub touching: bool,
 }
 
 pub static VIRTUAL_KEYBOARD_GLOBAL: Lazy<Mutex<VirtualTouchInfo>> =
@@ -182,8 +179,14 @@ pub fn virtual_keyboard_handler() {
     let document = web_sys::window().unwrap().document().unwrap();
     {
         let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
-            let touch_info = VIRTUAL_KEYBOARD_GLOBAL.lock().unwrap();
-            update_text_agent(touch_info.editing_text, touch_info.touch_pos);
+            match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                Ok(touch_info) => {
+                    update_text_agent(touch_info.editing_text, touch_info.touching);
+                }
+                Err(poisoned) => {
+                    let _unused = poisoned.into_inner();
+                }
+            };
         }) as Box<dyn FnMut(_)>);
         document
             .add_event_listener_with_callback("touchstart", closure.as_ref().unchecked_ref())
@@ -193,7 +196,7 @@ pub fn virtual_keyboard_handler() {
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
-fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
+fn update_text_agent(editing_text: bool, touching: bool) {
     use web_sys::HtmlInputElement;
 
     let window = match web_sys::window() {
@@ -223,7 +226,7 @@ fn update_text_agent(editing_text: bool, maybe_touch_pos: Option<egui::Pos2>) {
     if editing_text {
         let is_already_editing = input.hidden();
 
-        if is_already_editing && maybe_touch_pos.is_some() {
+        if is_already_editing && touching {
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}
