@@ -20,7 +20,7 @@ static AGENT_ID: &str = "egui_text_agent";
 #[derive(Clone, Copy, Debug, Default)]
 pub struct VirtualTouchInfo {
     pub editing_text: bool,
-    pub touching: bool,
+    pub last_touched: bool,
 }
 
 pub static VIRTUAL_KEYBOARD_GLOBAL: Lazy<Mutex<VirtualTouchInfo>> =
@@ -181,7 +181,7 @@ pub fn virtual_keyboard_handler() {
         let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
             match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                 Ok(touch_info) => {
-                    update_text_agent(touch_info.editing_text, touch_info.touching);
+                    update_text_agent(touch_info.editing_text, touch_info.last_touched);
                 }
                 Err(poisoned) => {
                     let _unused = poisoned.into_inner();
@@ -196,7 +196,7 @@ pub fn virtual_keyboard_handler() {
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
-fn update_text_agent(editing_text: bool, touching: bool) {
+fn update_text_agent(editing_text: bool, last_touched: bool) {
     use web_sys::HtmlInputElement;
 
     let window = match web_sys::window() {
@@ -226,7 +226,7 @@ fn update_text_agent(editing_text: bool, touching: bool) {
     if editing_text {
         let is_already_editing = input.hidden();
 
-        if is_already_editing && touching {
+        if is_already_editing && last_touched {
             input.set_hidden(false);
             match input.focus().ok() {
                 Some(_) => {}

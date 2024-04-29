@@ -389,7 +389,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touching = true;
+                            touch_info.last_touched = true;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
@@ -419,7 +419,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touching = true;
+                            touch_info.last_touched = true;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
@@ -439,7 +439,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touching = true;
+                            touch_info.last_touched = true;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
@@ -465,7 +465,7 @@ pub fn process_input_system(
                     match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                         Ok(mut touch_info) => {
                             touch_info.editing_text = editing_text;
-                            touch_info.touching = false;
+                            touch_info.last_touched = false;
                         }
                         Err(poisoned) => {
                             let _unused = poisoned.into_inner();
