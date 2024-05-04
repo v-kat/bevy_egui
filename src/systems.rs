@@ -385,16 +385,6 @@ pub fn process_input_system(
                 bevy::input::touch::TouchPhase::Started => {
                     window_context.ctx.pointer_touch_id = Some(event.id);
 
-                    #[cfg(target_arch = "wasm32")]
-                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
-                        Ok(mut touch_info) => {
-                            touch_info.editing_text = editing_text;
-                            touch_info.last_touched = true;
-                        }
-                        Err(poisoned) => {
-                            let _unused = poisoned.into_inner();
-                        }
-                    };
                     // First move the pointer to the right location.
                     window_context
                         .egui_input
@@ -415,16 +405,6 @@ pub fn process_input_system(
                         });
                 }
                 bevy::input::touch::TouchPhase::Moved => {
-                    #[cfg(target_arch = "wasm32")]
-                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
-                        Ok(mut touch_info) => {
-                            touch_info.editing_text = editing_text;
-                            touch_info.last_touched = true;
-                        }
-                        Err(poisoned) => {
-                            let _unused = poisoned.into_inner();
-                        }
-                    };
 
                     window_context
                         .egui_input
@@ -435,16 +415,6 @@ pub fn process_input_system(
                         )));
                 }
                 bevy::input::touch::TouchPhase::Ended => {
-                    #[cfg(target_arch = "wasm32")]
-                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
-                        Ok(mut touch_info) => {
-                            touch_info.editing_text = editing_text;
-                            touch_info.last_touched = true;
-                        }
-                        Err(poisoned) => {
-                            let _unused = poisoned.into_inner();
-                        }
-                    };
                     window_context.ctx.pointer_touch_id = None;
                     window_context
                         .egui_input
@@ -461,16 +431,6 @@ pub fn process_input_system(
                         .push(egui::Event::PointerGone);
                 }
                 bevy::input::touch::TouchPhase::Canceled => {
-                    #[cfg(target_arch = "wasm32")]
-                    match VIRTUAL_KEYBOARD_GLOBAL.lock() {
-                        Ok(mut touch_info) => {
-                            touch_info.editing_text = editing_text;
-                            touch_info.last_touched = false;
-                        }
-                        Err(poisoned) => {
-                            let _unused = poisoned.into_inner();
-                        }
-                    };
                     window_context.ctx.pointer_touch_id = None;
                     window_context
                         .egui_input
@@ -478,6 +438,15 @@ pub fn process_input_system(
                         .push(egui::Event::PointerGone);
                 }
             }
+            #[cfg(target_arch = "wasm32")]
+            match VIRTUAL_KEYBOARD_GLOBAL.lock() {
+                Ok(mut touch_info) => {
+                    touch_info.editing_text = editing_text;
+                }
+                Err(poisoned) => {
+                    let _unused = poisoned.into_inner();
+                }
+            };
         }
     }
 

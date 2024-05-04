@@ -20,7 +20,6 @@ static AGENT_ID: &str = "egui_text_agent";
 #[derive(Clone, Copy, Debug, Default)]
 pub struct VirtualTouchInfo {
     pub editing_text: bool,
-    pub last_touched: bool,
 }
 
 pub static VIRTUAL_KEYBOARD_GLOBAL: Lazy<Mutex<VirtualTouchInfo>> =
@@ -181,7 +180,7 @@ pub fn virtual_keyboard_handler() {
         let closure = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
             match VIRTUAL_KEYBOARD_GLOBAL.lock() {
                 Ok(touch_info) => {
-                    update_text_agent(touch_info.editing_text, touch_info.last_touched);
+                    update_text_agent(touch_info.editing_text);
                 }
                 Err(poisoned) => {
                     let _unused = poisoned.into_inner();
@@ -196,7 +195,7 @@ pub fn virtual_keyboard_handler() {
 }
 
 /// Focus or blur text agent to toggle mobile keyboard.
-fn update_text_agent(editing_text: bool, last_touched: bool) {
+fn update_text_agent(editing_text: bool) {
     use web_sys::HtmlInputElement;
 
     let window = match web_sys::window() {
@@ -223,26 +222,19 @@ fn update_text_agent(editing_text: bool, last_touched: bool) {
     .dyn_into()
     .unwrap();
 
-    if editing_text {
-        let is_already_editing = input.hidden();
+    let keyboard_closed = input.hidden();
 
-        if is_already_editing && last_touched {
-            input.set_hidden(false);
-            match input.focus().ok() {
-                Some(_) => {}
-                None => {
-                    bevy::log::error!("Unable to set focus");
-                }
+    if editing_text && keyboard_closed {
+        // open keyboard
+        input.set_hidden(false);
+        match input.focus().ok() {
+            Some(_) => {}
+            None => {
+                bevy::log::error!("Unable to set focus");
             }
-        } else {
-            if input.blur().is_err() {
-                bevy::log::error!("Agent element not found");
-                return;
-            }
-
-            input.set_hidden(true);
         }
     } else {
+        // close keyboard
         if input.blur().is_err() {
             bevy::log::error!("Agent element not found");
             return;
