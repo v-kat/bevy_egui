@@ -229,6 +229,7 @@ pub fn process_input_system(
             });
     }
 
+    #[cfg(target_arch = "wasm32")]
     let mut editing_text = false;
     #[cfg(target_arch = "wasm32")]
     for context in context_params.contexts.iter() {
@@ -390,7 +391,6 @@ pub fn process_input_system(
                         });
                 }
                 bevy::input::touch::TouchPhase::Moved => {
-
                     window_context
                         .egui_input
                         .events
