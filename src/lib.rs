@@ -940,8 +940,7 @@ fn free_egui_textures_system(
     }
 }
 
-/// Stores the clipboard event listeners.
-
+/// Stores event listeners.
 pub struct SubscribedEvents<T> {
     event_closures: Vec<EventClosure<T>>,
 }
@@ -955,7 +954,7 @@ impl<T> Default for SubscribedEvents<T> {
 }
 
 impl<T> SubscribedEvents<T> {
-    /// Use this method to unsubscribe from all the clipboard events, this can be useful
+    /// Use this method to unsubscribe from all stored events, this can be useful
     /// for gracefully destroying a Bevy instance in a page.
     pub fn unsubscribe_from_events(&mut self) {
         let events_to_unsubscribe = std::mem::take(&mut self.event_closures);
@@ -979,7 +978,6 @@ impl<T> SubscribedEvents<T> {
 struct EventClosure<T> {
     target: web_sys::EventTarget,
     event_name: String,
-    // closure: Closure<dyn FnMut(web_sys::ClipboardEvent)>,
     closure: wasm_bindgen::closure::Closure<dyn FnMut(T)>,
 }
 
